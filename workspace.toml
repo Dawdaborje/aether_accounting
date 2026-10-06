@@ -1,0 +1,14 @@
+[workspace]
+name = "accounting"
+label = "Accounting"
+version = "0.0.1"
+description = "A double-entry ledger that other plugins feed through events."
+long_description = """
+The ledger keeps entries that are written once, numbered without gaps and chained by hash. Source documents
+(expense reports, payroll runs, invoices) stay in their own plugins and reach the ledger as events turned into
+entries by versioned posting rules. Built from a reading of ERPNext accounts and Odoo 19 account; see docs/design.md.
+"""
+
+[workspace.plugins]
+gl = { path = "./gl" }
+gl_hrms = { path = "./gl_hrms" }

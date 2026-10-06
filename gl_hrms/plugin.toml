@@ -1,0 +1,34 @@
+[plugin]
+name = "gl_hrms"
+label = "Ledger entries from HR"
+version = "0.1.0"
+description = "Turns what payroll and expenses announce into ledger entries, so neither the ledger nor HR depends on the other."
+long_description = """
+The general ledger (`gl`) knows nothing about HR and the HR plugins know nothing about accounting. This plugin
+sits between them: it listens to `hr_payroll.payroll_run_approved` and `hr_expense.report_approved` and hands each
+event to the ledger, which turns it into an entry by its versioned posting rules. Install it only when you want
+both. Written in Rust.
+"""
+authors = [{ name = "Aether", email = "hello@aether.local" }]
+dependencies = ["gl", "hr_payroll", "hr_expense"]
+capabilities = ["events::subscribe", "plugins::call"]
+access_models = []
+is_builtin = false
+wasm_file = "out/plugin.wasm"
+
+[[events]]
+name = "hr_payroll.payroll_run_approved"
+direction = "listen"
+handler = "forward"
+
+[[events]]
+name = "hr_expense.report_approved"
+direction = "listen"
+handler = "forward"
+
+[plugin.api]
+version = "0.1"
+
+[plugin.meta]
+kind = "addon"
+workspace = "accounting"

@@ -1,0 +1,26 @@
+{
+  "model": "gl_posting_rule",
+  "access": [
+    {
+      "name": "read",
+      "roles": [
+        "gl_reader",
+        "gl_accountant",
+        "gl_admin"
+      ],
+      "operations": [
+        "read"
+      ]
+    },
+    {
+      "name": "setup",
+      "roles": [
+        "gl_admin"
+      ],
+      "operations": [
+        "create",
+        "write"
+      ]
+    }
+  ]
+}

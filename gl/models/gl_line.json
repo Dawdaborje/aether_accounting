@@ -1,0 +1,105 @@
+{
+  "model_id": "mdl_6dpwr3uibv",
+  "name": "gl_line",
+  "label": "%gl_line%",
+  "plural_label": "%gl_lines%",
+  "icon": "list",
+  "title_field": "entry",
+  "fields": [
+    {
+      "id": "fld_68bxovsf1i",
+      "name": "entry",
+      "label": "%entry%",
+      "type": "link",
+      "target": "gl_entry",
+      "required": true,
+      "index": "plain"
+    },
+    {
+      "id": "fld_fgxdlg2yjd",
+      "name": "line_no",
+      "label": "%line_no%",
+      "type": "int",
+      "required": true
+    },
+    {
+      "id": "fld_885e7r3igo",
+      "name": "account",
+      "label": "%account%",
+      "type": "link",
+      "target": "gl_account",
+      "required": true,
+      "index": "plain"
+    },
+    {
+      "id": "fld_nozl7yxd3p",
+      "name": "debit",
+      "label": "%debit%",
+      "type": "decimal",
+      "scale": 2,
+      "required": true
+    },
+    {
+      "id": "fld_c3mo6wdoy3",
+      "name": "credit",
+      "label": "%credit%",
+      "type": "decimal",
+      "scale": 2,
+      "required": true
+    },
+    {
+      "id": "fld_hndzql6hty",
+      "name": "party",
+      "label": "%party%",
+      "type": "string",
+      "max_length": 80,
+      "index": "plain"
+    },
+    {
+      "id": "fld_9ijll33vkk",
+      "name": "tax_code",
+      "label": "%tax_code%",
+      "type": "string",
+      "max_length": 40
+    },
+    {
+      "id": "fld_d7rmvfbpsa",
+      "name": "memo",
+      "label": "%memo%",
+      "type": "string",
+      "max_length": 300
+    },
+    {
+      "id": "fld_ldtc0rrouo",
+      "name": "dimensions",
+      "label": "%dimensions%",
+      "type": "json"
+    },
+    {
+      "id": "fld_ztybo6xq7k",
+      "name": "date",
+      "label": "%date%",
+      "type": "date",
+      "required": true,
+      "index": "plain"
+    }
+  ],
+  "indexes": [
+    {
+      "id": "idx_e42js428qb",
+      "fields": [
+        "entry",
+        "line_no"
+      ],
+      "unique": true
+    }
+  ],
+  "view": {
+    "list": [
+      "entry",
+      "account",
+      "debit",
+      "credit"
+    ]
+  }
+}

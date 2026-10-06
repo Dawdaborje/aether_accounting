@@ -1,0 +1,100 @@
+{
+  "model_id": "mdl_sjjhq5dncg",
+  "name": "gl_account",
+  "label": "%gl_account%",
+  "plural_label": "%gl_accounts%",
+  "icon": "landmark",
+  "title_field": "code",
+  "fields": [
+    {
+      "id": "fld_p6rju2qp2q",
+      "name": "code",
+      "label": "%code%",
+      "type": "string",
+      "required": true,
+      "max_length": 30,
+      "index": "unique"
+    },
+    {
+      "id": "fld_9jl3evl31f",
+      "name": "name",
+      "label": "%name%",
+      "type": "string",
+      "required": true,
+      "max_length": 160
+    },
+    {
+      "id": "fld_b95g6plnl9",
+      "name": "kind",
+      "label": "%kind%",
+      "type": "select",
+      "options": [
+        {
+          "id": "opt_3zkcmtefc2",
+          "value": "asset",
+          "label": "%asset%"
+        },
+        {
+          "id": "opt_aq1jecnpuq",
+          "value": "liability",
+          "label": "%liability%"
+        },
+        {
+          "id": "opt_636e0wy36w",
+          "value": "equity",
+          "label": "%equity%"
+        },
+        {
+          "id": "opt_yxylgw2qxm",
+          "value": "income",
+          "label": "%income%"
+        },
+        {
+          "id": "opt_e4135tprkk",
+          "value": "expense",
+          "label": "%expense%"
+        }
+      ],
+      "required": true,
+      "index": "plain"
+    },
+    {
+      "id": "fld_65n36o683d",
+      "name": "parent",
+      "label": "%parent%",
+      "type": "link",
+      "target": "gl_account",
+      "hierarchy": true
+    },
+    {
+      "id": "fld_3af2exs404",
+      "name": "is_group",
+      "label": "%is_group%",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "id": "fld_ah6qsouefs",
+      "name": "is_control",
+      "label": "%is_control%",
+      "type": "bool",
+      "default": false,
+      "help": "Every line needs a party (an employee, a supplier)."
+    },
+    {
+      "id": "fld_ujoh6svwyl",
+      "name": "is_active",
+      "label": "%is_active%",
+      "type": "bool",
+      "default": true
+    }
+  ],
+  "view": {
+    "list": [
+      "code",
+      "name",
+      "kind",
+      "is_group"
+    ]
+  }
+}

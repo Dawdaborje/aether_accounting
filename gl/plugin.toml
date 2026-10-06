@@ -1,0 +1,62 @@
+[plugin]
+name = "gl"
+label = "General ledger"
+version = "0.1.0"
+description = "A double-entry ledger whose entries are written once, numbered without gaps and chained by hash."
+long_description = """
+Entries balance exactly (no tolerance, no automatic round-off line) and are written once, with the two
+counters they move, in a single transaction: a mistake is corrected by a reversing entry that points at the
+original, never by changing it. A hash chain over every entry makes tampering visible, and a report replays it.
+Periods are records that close for good. Other plugins never post to the ledger directly: an event such as an
+an event from another plugin (an approved expense report, a payroll run) becomes an entry through a versioned posting rule once a small glue plugin hands it over, keyed by the document, so the same
+event twice is one entry. Credits against a control account (what an employee is owed) are matched with
+allocation rows, and the open amount of a line is derived from them. Built from a reading of ERPNext accounts
+and Odoo 19 account. Single currency in this version. Written in Rust.
+"""
+authors = [{ name = "Aether", email = "hello@aether.local" }]
+dependencies = []
+capabilities = ["db::query", "db::mutate", "db::transaction"]
+access_models = [
+  { name = "gl_ledger", permissions = ["read", "write"] },
+  { name = "gl_account", permissions = ["read", "write"] },
+  { name = "gl_journal", permissions = ["read", "write"] },
+  { name = "gl_period", permissions = ["read", "write"] },
+  { name = "gl_entry", permissions = ["read", "write"] },
+  { name = "gl_line", permissions = ["read", "write"] },
+  { name = "gl_allocation", permissions = ["read", "write"] },
+  { name = "gl_posting_rule", permissions = ["read", "write"] },
+]
+is_builtin = false
+wasm_file = "out/plugin.wasm"
+
+[[roles]]
+name = "gl_admin"
+label = "Ledger administrator"
+description = "Sets up the ledger, accounts, journals, periods and posting rules; closes periods"
+
+[[roles]]
+name = "gl_accountant"
+label = "Accountant"
+description = "Posts and reverses entries, matches credits against debits"
+
+[[roles]]
+name = "gl_reader"
+label = "Ledger reader"
+description = "Reads the ledger and its reports"
+
+[[schedule]]
+name = "index-recent-entries"
+function = "index_recent_entries"
+every = "10m"
+
+[app]
+icon = "scale"
+route = "/accounting"
+description = "Trial balance and journals"
+
+[plugin.api]
+version = "0.1"
+
+[plugin.meta]
+kind = "addon"
+workspace = "accounting"

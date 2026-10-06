@@ -1,0 +1,180 @@
+{
+  "model_id": "mdl_sxvdgum4em",
+  "name": "gl_entry",
+  "label": "%gl_entry%",
+  "plural_label": "%gl_entrys%",
+  "icon": "file-text",
+  "title_field": "number",
+  "fields": [
+    {
+      "id": "fld_e9dw1x6blk",
+      "name": "number",
+      "label": "%number%",
+      "type": "string",
+      "required": true,
+      "max_length": 40,
+      "index": "unique"
+    },
+    {
+      "id": "fld_w1ozud22b3",
+      "name": "seq",
+      "label": "%seq%",
+      "type": "int",
+      "required": true,
+      "index": "unique"
+    },
+    {
+      "id": "fld_quazlcyiqz",
+      "name": "journal",
+      "label": "%journal%",
+      "type": "link",
+      "target": "gl_journal",
+      "required": true,
+      "index": "plain"
+    },
+    {
+      "id": "fld_5r5mixl8vy",
+      "name": "period",
+      "label": "%period%",
+      "type": "link",
+      "target": "gl_period",
+      "required": true,
+      "index": "plain"
+    },
+    {
+      "id": "fld_qxsdzfli7s",
+      "name": "date",
+      "label": "%date%",
+      "type": "date",
+      "required": true,
+      "index": "plain"
+    },
+    {
+      "id": "fld_9t7rf4rupn",
+      "name": "memo",
+      "label": "%memo%",
+      "type": "string",
+      "max_length": 300
+    },
+    {
+      "id": "fld_8urqc0iz7t",
+      "name": "currency",
+      "label": "%currency%",
+      "type": "string",
+      "required": true,
+      "max_length": 10
+    },
+    {
+      "id": "fld_de72dnz2tt",
+      "name": "total",
+      "label": "%total%",
+      "type": "decimal",
+      "scale": 2,
+      "required": true
+    },
+    {
+      "id": "fld_epfpx5ftl9",
+      "name": "lines",
+      "label": "%lines%",
+      "type": "json",
+      "required": true,
+      "help": "The lines as they were posted: the record the hash covers."
+    },
+    {
+      "id": "fld_b4obx6uj8e",
+      "name": "line_count",
+      "label": "%line_count%",
+      "type": "int",
+      "required": true
+    },
+    {
+      "id": "fld_3emn6yxxiy",
+      "name": "source_kind",
+      "label": "%source_kind%",
+      "type": "string",
+      "max_length": 80,
+      "index": "plain"
+    },
+    {
+      "id": "fld_d9sklf80wt",
+      "name": "source_id",
+      "label": "%source_id%",
+      "type": "string",
+      "max_length": 120,
+      "index": "plain"
+    },
+    {
+      "id": "fld_qcgd0viywz",
+      "name": "source_version",
+      "label": "%source_version%",
+      "type": "int"
+    },
+    {
+      "id": "fld_jsb4w38zct",
+      "name": "idem_key",
+      "label": "%idem_key%",
+      "type": "string",
+      "required": true,
+      "max_length": 300,
+      "index": "unique"
+    },
+    {
+      "id": "fld_9zgf5rk1t7",
+      "name": "reverses",
+      "label": "%reverses%",
+      "type": "link",
+      "target": "gl_entry"
+    },
+    {
+      "id": "fld_dw7tej4jjx",
+      "name": "reason",
+      "label": "%reason%",
+      "type": "text"
+    },
+    {
+      "id": "fld_ybs2p7oor8",
+      "name": "prev_hash",
+      "label": "%prev_hash%",
+      "type": "string",
+      "required": true,
+      "max_length": 80
+    },
+    {
+      "id": "fld_a404nwuv9m",
+      "name": "hash",
+      "label": "%hash%",
+      "type": "string",
+      "required": true,
+      "max_length": 80
+    },
+    {
+      "id": "fld_asin9a7wg1",
+      "name": "hash_version",
+      "label": "%hash_version%",
+      "type": "int",
+      "required": true
+    },
+    {
+      "id": "fld_xeq60lhdat",
+      "name": "posted_by",
+      "label": "%posted_by%",
+      "type": "string",
+      "max_length": 80
+    },
+    {
+      "id": "fld_0yi9zw8yfh",
+      "name": "posted_at",
+      "label": "%posted_at%",
+      "type": "string",
+      "max_length": 40
+    }
+  ],
+  "view": {
+    "list": [
+      "number",
+      "date",
+      "memo",
+      "total"
+    ]
+  }
+}

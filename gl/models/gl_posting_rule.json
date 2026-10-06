@@ -1,0 +1,89 @@
+{
+  "model_id": "mdl_vaoanispdt",
+  "name": "gl_posting_rule",
+  "label": "%gl_posting_rule%",
+  "plural_label": "%gl_posting_rules%",
+  "icon": "wand",
+  "title_field": "event",
+  "fields": [
+    {
+      "id": "fld_laqcjoz427",
+      "name": "event",
+      "label": "%event%",
+      "type": "string",
+      "required": true,
+      "max_length": 160,
+      "index": "plain",
+      "help": "<plugin>.<event>"
+    },
+    {
+      "id": "fld_run7m4dd4u",
+      "name": "version",
+      "label": "%version%",
+      "type": "int",
+      "required": true
+    },
+    {
+      "id": "fld_xrp2wjumxn",
+      "name": "is_active",
+      "label": "%is_active%",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "id": "fld_kku8nycv0s",
+      "name": "journal",
+      "label": "%journal%",
+      "type": "link",
+      "target": "gl_journal",
+      "required": true
+    },
+    {
+      "id": "fld_muobfv3ae4",
+      "name": "memo",
+      "label": "%memo%",
+      "type": "string",
+      "max_length": 300
+    },
+    {
+      "id": "fld_71rfgv5pbt",
+      "name": "currency_path",
+      "label": "%currency_path%",
+      "type": "string",
+      "max_length": 120
+    },
+    {
+      "id": "fld_b60em9rcgm",
+      "name": "source_path",
+      "label": "%source_path%",
+      "type": "string",
+      "required": true,
+      "max_length": 120,
+      "help": "Where the payload names the document, for the idempotency key."
+    },
+    {
+      "id": "fld_xokiyljyvh",
+      "name": "lines",
+      "label": "%lines%",
+      "type": "json",
+      "required": true
+    }
+  ],
+  "indexes": [
+    {
+      "id": "idx_102bietki8",
+      "fields": [
+        "event",
+        "version"
+      ],
+      "unique": true
+    }
+  ],
+  "view": {
+    "list": [
+      "event",
+      "version",
+      "is_active"
+    ]
+  }
+}

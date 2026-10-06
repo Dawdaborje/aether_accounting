@@ -1,0 +1,40 @@
+{
+  "model": "gl_line",
+  "access": [
+    {
+      "name": "read",
+      "roles": [
+        "gl_reader",
+        "gl_accountant",
+        "gl_admin"
+      ],
+      "operations": [
+        "read"
+      ]
+    },
+    {
+      "name": "post",
+      "roles": [
+        "gl_accountant",
+        "gl_admin"
+      ],
+      "operations": [
+        "create"
+      ]
+    }
+  ],
+  "restrict": [
+    {
+      "name": "sealed",
+      "operations": [
+        "write",
+        "delete"
+      ],
+      "when": {
+        "line_no": {
+          "lt": 0
+        }
+      }
+    }
+  ]
+}

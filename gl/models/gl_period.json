@@ -1,0 +1,68 @@
+{
+  "model_id": "mdl_g6uppd2ipp",
+  "name": "gl_period",
+  "label": "%gl_period%",
+  "plural_label": "%gl_periods%",
+  "icon": "calendar",
+  "title_field": "name",
+  "fields": [
+    {
+      "id": "fld_vdx4v3vkkf",
+      "name": "name",
+      "label": "%name%",
+      "type": "string",
+      "required": true,
+      "max_length": 40,
+      "index": "unique"
+    },
+    {
+      "id": "fld_84t1tzhqyr",
+      "name": "start_date",
+      "label": "%start_date%",
+      "type": "date",
+      "required": true,
+      "index": "plain"
+    },
+    {
+      "id": "fld_68u0wi0l0f",
+      "name": "end_date",
+      "label": "%end_date%",
+      "type": "date",
+      "required": true
+    },
+    {
+      "id": "fld_7bz3p49m39",
+      "name": "status",
+      "label": "%status%",
+      "type": "select",
+      "options": [
+        {
+          "id": "opt_o8e1fae94c",
+          "value": "open",
+          "label": "%open%"
+        },
+        {
+          "id": "opt_ptj9gav2oe",
+          "value": "closed",
+          "label": "%closed%"
+        }
+      ],
+      "required": true,
+      "default": "open"
+    },
+    {
+      "id": "fld_fy9zkhij79",
+      "name": "closed_on",
+      "label": "%closed_on%",
+      "type": "date"
+    }
+  ],
+  "view": {
+    "list": [
+      "name",
+      "start_date",
+      "end_date",
+      "status"
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "model_id": "mdl_ma9d6dnogm",
+  "name": "gl_ledger",
+  "label": "%gl_ledger%",
+  "plural_label": "%gl_ledgers%",
+  "icon": "book",
+  "title_field": "name",
+  "fields": [
+    {
+      "id": "fld_68flth6qgq",
+      "name": "name",
+      "label": "%name%",
+      "type": "string",
+      "required": true,
+      "max_length": 120
+    },
+    {
+      "id": "fld_xb1qzjf05r",
+      "name": "base_currency",
+      "label": "%base_currency%",
+      "type": "string",
+      "required": true,
+      "max_length": 10
+    },
+    {
+      "id": "fld_3onsp9xx2m",
+      "name": "seq",
+      "label": "%seq%",
+      "type": "int",
+      "default": 0,
+      "help": "The number of the last entry: entries are numbered without gaps."
+    }
+  ]
+}

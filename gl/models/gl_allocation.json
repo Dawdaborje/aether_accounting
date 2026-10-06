@@ -1,0 +1,82 @@
+{
+  "model_id": "mdl_gdvj9g5a1o",
+  "name": "gl_allocation",
+  "label": "%gl_allocation%",
+  "plural_label": "%gl_allocations%",
+  "icon": "link",
+  "title_field": "amount",
+  "fields": [
+    {
+      "id": "fld_606jt9ka66",
+      "name": "debit_line",
+      "label": "%debit_line%",
+      "type": "link",
+      "target": "gl_line",
+      "required": true,
+      "index": "plain"
+    },
+    {
+      "id": "fld_1i3dec86bt",
+      "name": "credit_line",
+      "label": "%credit_line%",
+      "type": "link",
+      "target": "gl_line",
+      "required": true,
+      "index": "plain"
+    },
+    {
+      "id": "fld_w69sczrs8w",
+      "name": "account",
+      "label": "%account%",
+      "type": "link",
+      "target": "gl_account",
+      "required": true,
+      "index": "plain"
+    },
+    {
+      "id": "fld_7hz5khtken",
+      "name": "party",
+      "label": "%party%",
+      "type": "string",
+      "max_length": 80,
+      "index": "plain"
+    },
+    {
+      "id": "fld_dl2c9ecoqv",
+      "name": "amount",
+      "label": "%amount%",
+      "type": "decimal",
+      "scale": 2,
+      "required": true,
+      "help": "Negative when it undoes an earlier allocation."
+    },
+    {
+      "id": "fld_ct9k55pcma",
+      "name": "reverses",
+      "label": "%reverses%",
+      "type": "link",
+      "target": "gl_allocation"
+    },
+    {
+      "id": "fld_0byiwcgcdb",
+      "name": "date",
+      "label": "%date%",
+      "type": "date",
+      "required": true
+    },
+    {
+      "id": "fld_9zbdcfg6z1",
+      "name": "by",
+      "label": "%by%",
+      "type": "string",
+      "max_length": 80
+    }
+  ],
+  "view": {
+    "list": [
+      "debit_line",
+      "credit_line",
+      "amount"
+    ]
+  }
+}

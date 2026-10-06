@@ -1,0 +1,93 @@
+{
+  "model_id": "mdl_9yz79aw2tz",
+  "name": "gl_journal",
+  "label": "%gl_journal%",
+  "plural_label": "%gl_journals%",
+  "icon": "notebook",
+  "title_field": "code",
+  "fields": [
+    {
+      "id": "fld_tlqqewbv80",
+      "name": "code",
+      "label": "%code%",
+      "type": "string",
+      "required": true,
+      "max_length": 20,
+      "index": "unique"
+    },
+    {
+      "id": "fld_mniz3r67s1",
+      "name": "name",
+      "label": "%name%",
+      "type": "string",
+      "required": true,
+      "max_length": 120
+    },
+    {
+      "id": "fld_nz3ms3bszx",
+      "name": "kind",
+      "label": "%kind%",
+      "type": "select",
+      "options": [
+        {
+          "id": "opt_287syj2ndh",
+          "value": "general",
+          "label": "%general%"
+        },
+        {
+          "id": "opt_26nddurpjy",
+          "value": "purchase",
+          "label": "%purchase%"
+        },
+        {
+          "id": "opt_zpzo0fbtor",
+          "value": "payroll",
+          "label": "%payroll%"
+        },
+        {
+          "id": "opt_zsf5689yu8",
+          "value": "bank",
+          "label": "%bank%"
+        }
+      ],
+      "required": true
+    },
+    {
+      "id": "fld_4tux2t6ass",
+      "name": "prefix",
+      "label": "%prefix%",
+      "type": "string",
+      "required": true,
+      "max_length": 12,
+      "index": "unique"
+    },
+    {
+      "id": "fld_zlcmlab39j",
+      "name": "next",
+      "label": "%next%",
+      "type": "int",
+      "default": 0
+    },
+    {
+      "id": "fld_gvyeubadkm",
+      "name": "default_account",
+      "label": "%default_account%",
+      "type": "link",
+      "target": "gl_account"
+    },
+    {
+      "id": "fld_8oh2txrp2c",
+      "name": "is_active",
+      "label": "%is_active%",
+      "type": "bool",
+      "default": true
+    }
+  ],
+  "view": {
+    "list": [
+      "code",
+      "name",
+      "kind"
+    ]
+  }
+}
