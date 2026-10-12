@@ -36,5 +36,37 @@
         }
       }
     }
+  ],
+  "fields": [
+    {
+      "fields": [
+        "number",
+        "seq",
+        "journal",
+        "period",
+        "date",
+        "memo",
+        "currency",
+        "total",
+        "lines",
+        "line_count",
+        "source_kind",
+        "source_id",
+        "source_version",
+        "idem_key",
+        "reverses",
+        "reason",
+        "prev_hash",
+        "hash",
+        "hash_version",
+        "posted_by",
+        "posted_at",
+        "journal_code",
+        "rule_version"
+      ],
+      "write_roles": [
+        "via:self"
+      ]
+    }
   ]
 }

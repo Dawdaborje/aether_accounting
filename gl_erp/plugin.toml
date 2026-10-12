@@ -1,0 +1,45 @@
+[plugin]
+name = "gl_erp"
+icon_path = "assets/logo.svg"
+label = "Ledger entries from ERP"
+version = "0.1.0"
+description = "Turns stock ledger events into general-ledger entries through posting rules."
+long_description = """
+The general ledger (`gl`) knows nothing about inventory and `erp_inventory` knows nothing about accounts.
+This plugin sits between them: it listens to `erp_inventory.stock_posted` and `erp_inventory.stock_voided`
+and hands each event to the ledger. Transfers are skipped (no P&L or balance-sheet change inside one company).
+Install only when both accounting and ERP are in use. Written in Rust.
+"""
+authors = [{ name = "Aether", email = "hello@aether.local" }]
+dependencies = ["gl", "erp_inventory", "erp_procurement", "erp_selling"]
+capabilities = ["events::subscribe", "plugins::call"]
+access_models = []
+is_builtin = false
+wasm_file = "out/plugin.wasm"
+
+[[events]]
+name = "erp_inventory.stock_posted"
+direction = "listen"
+handler = "forward"
+
+[[events]]
+name = "erp_inventory.stock_voided"
+direction = "listen"
+handler = "forward"
+
+[[events]]
+name = "erp_procurement.purchase_bill_approved"
+direction = "listen"
+handler = "forward"
+
+[[events]]
+name = "erp_selling.sales_invoice_approved"
+direction = "listen"
+handler = "forward"
+
+[plugin.api]
+version = "0.1"
+
+[plugin.meta]
+kind = "addon"
+workspace = "accounting"

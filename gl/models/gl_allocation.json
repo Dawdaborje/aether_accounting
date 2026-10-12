@@ -70,6 +70,26 @@
       "label": "%by%",
       "type": "string",
       "max_length": 80
+    },
+    {
+      "id": "fld_6bw5cfztlu",
+      "name": "debit_slot",
+      "label": "%debit_slot%",
+      "type": "string",
+      "required": false,
+      "max_length": 120,
+      "index": "unique",
+      "help": "Place of this allocation on the line (line id and a running number): two writers cannot take the same place."
+    },
+    {
+      "id": "fld_8h1rnmtws5",
+      "name": "credit_slot",
+      "label": "%credit_slot%",
+      "type": "string",
+      "required": false,
+      "max_length": 120,
+      "index": "unique",
+      "help": "Place of this allocation on the line (line id and a running number): two writers cannot take the same place."
     }
   ],
   "view": {

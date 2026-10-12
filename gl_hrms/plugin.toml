@@ -1,5 +1,6 @@
 [plugin]
 name = "gl_hrms"
+icon_path = "assets/logo.svg"
 label = "Ledger entries from HR"
 version = "0.1.0"
 description = "Turns what payroll and expenses announce into ledger entries, so neither the ledger nor HR depends on the other."

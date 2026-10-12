@@ -14,7 +14,19 @@ use aether_sdk::prelude::*;
 use crate::common::{
     account_by_code, actor_name, id_of, journal_by_code, ledger, require, require_accountant, text, today_date, Record,
 };
-use crate::rules::{apply_template, canonical, check_lines, line_json, merge_lines, numbered, period_for, sha256_hex, Line, GENESIS, HASH_VERSION};
+use crate::rules::{apply_template, canonical_for, check_lines, idempotency_key, line_json, merge_lines, numbered, period_for, sha256_hex, Facts, Line, GENESIS, HASH_VERSION};
+
+/// The document an entry was made from.
+#[derive(Debug, Clone)]
+pub struct Source {
+    pub kind: String,
+    pub id: String,
+    /// The document's own version, from the payload; none when the rule names no version path.
+    pub version: Option<i64>,
+    /// The posting rule's version, kept as information.
+    pub rule_version: i64,
+    pub key: String,
+}
 
 pub struct Posting {
     pub journal: String,
@@ -22,7 +34,7 @@ pub struct Posting {
     pub memo: Option<String>,
     pub currency: Option<String>,
     pub lines: Vec<Line>,
-    pub source: Option<(String, String, i64)>,
+    pub source: Option<Source>,
     pub reverses: Option<String>,
     pub reason: Option<String>,
 }
@@ -78,10 +90,6 @@ fn to_line(input: LineInput) -> Result<Line> {
     })
 }
 
-fn source_key(source: &(String, String, i64)) -> String {
-    format!("{}:{}:v{}", source.0, source.1, source.2)
-}
-
 /// The id of each line's account, checked: it exists, is active, is not a group, and has a party when it is a control account.
 fn resolve_accounts(lines: &[Line]) -> Result<Vec<String>> {
     let mut ids = Vec::new();
@@ -115,6 +123,19 @@ fn open_period(date: aether_sdk::dates::NaiveDate) -> Result<String> {
     Ok(id_of(period)?.to_string())
 }
 
+/// The counter of a journal for a year, made on first use: every journal numbers every year from 1. Two first
+/// uses at once make the same unique key; the loser reads the winner's row.
+fn year_counter(journal_id: &str, year: i32) -> Result<Record> {
+    let key = format!("{journal_id}:{year}");
+    if let Some(row) = db::find::<Record>("gl_counter").filter("key", key.as_str()).first()? {
+        return Ok(row);
+    }
+    match db::create::<Record>("gl_counter", &json!({ "key": key, "next": 0 })) {
+        Ok(row) => Ok(row),
+        Err(error) => db::find::<Record>("gl_counter").filter("key", key.as_str()).first()?.ok_or(error),
+    }
+}
+
 pub fn post(posting: Posting) -> Result<Record> {
     let ledger_row = ledger()?;
     let base = text(&ledger_row, "base_currency").unwrap_or_default().to_string();
@@ -124,7 +145,7 @@ pub fn post(posting: Posting) -> Result<Record> {
     }
     let date = parse_date(&posting.date)?;
     if let Some(source) = &posting.source {
-        if let Some(existing) = db::find::<Record>("gl_entry").filter("idem_key", source_key(source).as_str()).first()? {
+        if let Some(existing) = db::find::<Record>("gl_entry").filter("idem_key", source.key.as_str()).first()? {
             return Ok(existing);
         }
     }
@@ -154,21 +175,41 @@ pub fn post(posting: Posting) -> Result<Record> {
         let last: Option<Record> = db::find("gl_entry").order_by("-seq").first()?;
         let prev_hash = last.as_ref().and_then(|e| text(e, "hash")).unwrap_or(GENESIS).to_string();
         let seq = ledger_row.get("seq").and_then(Value::as_i64).unwrap_or(0) + 1;
-        let number = numbered(text(&journal, "prefix").unwrap_or("JE"), date.year(), journal.get("next").and_then(Value::as_i64).unwrap_or(0) + 1);
-        let hash = sha256_hex(&canonical(&prev_hash, seq, &number, &format_date(date), &posting.journal, &currency, &pairs));
-        let idem = posting.source.as_ref().map(source_key).unwrap_or_else(|| format!("manual:{number}"));
+        let counter = year_counter(id_of(&journal)?, date.year())?;
+        let number = numbered(text(&journal, "prefix").unwrap_or("JE"), date.year(), counter.get("next").and_then(Value::as_i64).unwrap_or(0) + 1);
+        let journal_code = text(&journal, "code").unwrap_or(posting.journal.as_str()).to_string();
+        let date_text = format_date(date);
+        let facts = Facts {
+            prev_hash: &prev_hash,
+            seq,
+            number: &number,
+            date: &date_text,
+            journal_code: &journal_code,
+            currency: &currency,
+            reverses: posting.reverses.as_deref(),
+            source_kind: posting.source.as_ref().map(|s| s.kind.as_str()),
+            source_id: posting.source.as_ref().map(|s| s.id.as_str()),
+            source_version: posting.source.as_ref().and_then(|s| s.version),
+            reason: posting.reason.as_deref(),
+            memo: posting.memo.as_deref(),
+        };
+        let hash = sha256_hex(&canonical_for(HASH_VERSION, &facts, &pairs));
+        let idem = posting.source.as_ref().map(|s| s.key.clone()).unwrap_or_else(|| format!("manual:{number}"));
         let mut data = json!({
             "number": number, "seq": seq, "journal": journal["id"], "period": period, "date": format_date(date), "currency": currency,
             "total": total, "lines": stored, "line_count": stored.len(), "idem_key": idem, "prev_hash": prev_hash, "hash": hash,
-            "hash_version": HASH_VERSION, "posted_at": context::current()?.now,
+            "hash_version": HASH_VERSION, "journal_code": journal_code, "posted_at": context::current()?.now,
         });
         if let Some(memo) = &posting.memo {
             data["memo"] = json!(memo);
         }
         if let Some(source) = &posting.source {
-            data["source_kind"] = json!(source.0);
-            data["source_id"] = json!(source.1);
-            data["source_version"] = json!(source.2);
+            data["source_kind"] = json!(source.kind);
+            data["source_id"] = json!(source.id);
+            data["rule_version"] = json!(source.rule_version);
+            if let Some(version) = source.version {
+                data["source_version"] = json!(version);
+            }
         }
         if let Some(original) = &posting.reverses {
             data["reverses"] = json!(original);
@@ -181,7 +222,7 @@ pub fn post(posting: Posting) -> Result<Record> {
         }
         match db::transaction()
             .increment("gl_ledger", id_of(&ledger_row)?, "seq", 1.0)
-            .increment("gl_journal", id_of(&journal)?, "next", 1.0)
+            .increment("gl_counter", id_of(&counter)?, "next", 1.0)
             .create("gl_entry", &data)
             .run()
         {
@@ -195,7 +236,7 @@ pub fn post(posting: Posting) -> Result<Record> {
             Err(error) => {
                 // Someone else took the number or the same source: look again before trying again.
                 if let Some(source) = &posting.source {
-                    if let Some(existing) = db::find::<Record>("gl_entry").filter("idem_key", source_key(source).as_str()).first()? {
+                    if let Some(existing) = db::find::<Record>("gl_entry").filter("idem_key", source.key.as_str()).first()? {
                         return Ok(existing);
                     }
                 }
@@ -280,17 +321,32 @@ fn reverse(input: Reverse) -> Result<Record> {
     })
 }
 
-/// An event with a posting rule becomes an entry; the same event again is the same entry.
+/// A whole number in a payload (a document's version), sent as a number or as text.
+fn whole_number(value: &Value) -> Option<i64> {
+    match value {
+        Value::Number(n) => n.as_i64(),
+        Value::String(t) => t.trim().parse().ok(),
+        _ => None,
+    }
+}
+
+/// An event with a posting rule becomes an entry; the same document at the same version again is the same entry.
+///
+/// The rule says where the document, its version and its date are in the payload. A rule without `version_path`
+/// keeps the old key (the rule's version); a rule with one posts a changed document again and never posts a
+/// redelivered one twice, whichever rule version is current. A rule without `date_path` is refused: the entry date
+/// is the document's, and "the day it was processed" has to be chosen on purpose (`date_path` of `"@today"`).
 fn from_event(received: &Received) -> Result<Value> {
-    // Events are delivered by the kernel; a person calling this directly could post anything they like.
+    // Events are delivered by the kernel (the forwarder's call has no member behind it). A person, even an
+    // administrator, calling this directly could post whatever they like and take the key of a real document.
     let context = context::current()?;
-    if context.is_member() && !context.has_role(crate::common::ADMIN_ROLE) {
+    if context.is_member() {
         return Err(Error::msg("events are delivered by the kernel, not posted by hand: use post_entry"));
     }
     let rule = db::find::<Record>("gl_posting_rule").filter("event", received.event.as_str()).filter("is_active", true).order_by("-version").first()?;
+    // An event nobody has a rule for fails, so the delivery job stays visible and is retried once the rule exists.
     let Some(rule) = rule else {
-        log::warn(&format!("no active posting rule for {}: nothing was posted", received.event));
-        return Ok(json!({ "posted": false, "reason": "no rule" }));
+        return Err(Error::msg(format!("no active posting rule for `{}`: add one and the delivery is retried", received.event)));
     };
     let payload = &received.payload;
     let ledger_row = ledger()?;
@@ -304,6 +360,22 @@ fn from_event(received: &Received) -> Result<Value> {
         .and_then(Value::as_str)
         .ok_or_else(|| Error::msg("the event does not name its document where the rule looks"))?
         .to_string();
+    let version = match text(&rule, "version_path") {
+        Some(path) => Some(
+            crate::rules::dig(payload, path)
+                .and_then(whole_number)
+                .ok_or_else(|| Error::msg(format!("the rule wants the document's version at `{path}` and the event has none")))?,
+        ),
+        None => None,
+    };
+    let date = match text(&rule, "date_path") {
+        Some("@today") => today_date()?,
+        Some(path) => {
+            let raw = crate::rules::dig(payload, path).and_then(Value::as_str).ok_or_else(|| Error::msg(format!("the rule dates the entry from `{path}` and the event has no date there")))?;
+            parse_date(raw.get(..10).unwrap_or(raw))?
+        }
+        None => return Err(Error::msg("the posting rule does not say which date to use: set `date_path` to the date in the payload, or to `@today` on purpose")),
+    };
     let resolved = apply_template(&rule["lines"], payload)?;
     let zero = Decimal::zero(2);
     let lines: Vec<Line> = resolved
@@ -311,14 +383,15 @@ fn from_event(received: &Received) -> Result<Value> {
         .map(|r| Line { account: r.account, debit: if r.debit { r.amount } else { zero }, credit: if r.debit { zero } else { r.amount }, party: r.party, tax_code: None, memo: None })
         .collect();
     let journal = require("gl_journal", text(&rule, "journal").unwrap_or_default(), "journal")?;
-    let version = rule.get("version").and_then(Value::as_i64).unwrap_or(1);
+    let rule_version = rule.get("version").and_then(Value::as_i64).unwrap_or(1);
+    let key = idempotency_key(&received.event, &source_id, version.map(|v| v.to_string()).as_deref(), rule_version);
     let entry = post(Posting {
         journal: text(&journal, "code").unwrap_or_default().to_string(),
-        date: format_date(today_date()?),
+        date: format_date(date),
         memo: Some(text(&rule, "memo").map_or_else(|| received.event.clone(), str::to_string)),
         currency: None,
         lines,
-        source: Some((received.event.clone(), source_id, version)),
+        source: Some(Source { kind: received.event.clone(), id: source_id, version, rule_version, key }),
         reverses: None,
         reason: None,
     })?;
@@ -346,17 +419,24 @@ handler! {
         from_event(&input)
     }
 
-    /// Complete the line rows of entries whose copy failed.
+    /// Complete the line rows of entries whose copy failed. Walks forward from the entry after the last one known to
+    /// be indexed (`gl_ledger.indexed_seq`), so an old gap is found however many entries came after it.
     fn index_recent_entries(_: Empty) -> Value {
-        let recent: Vec<Record> = db::find("gl_entry").order_by("-seq").limit(200).all()?;
-        let mut repaired = 0u64;
-        for entry in &recent {
+        let ledger_row = ledger()?;
+        let from = ledger_row.get("indexed_seq").and_then(Value::as_i64).unwrap_or(0);
+        let batch: Vec<Record> = db::find("gl_entry").matching(Filter::gt("seq", from)).order_by("seq").limit(100).all()?;
+        let (mut repaired, mut through) = (0u64, from);
+        for entry in &batch {
             if db::count("gl_line", Filter::eq("entry", id_of(entry)?))? == 0 {
                 index_lines(entry)?;
                 repaired += 1;
             }
+            through = entry.get("seq").and_then(Value::as_i64).unwrap_or(through);
         }
-        Ok(json!({ "repaired": repaired }))
+        if through > from {
+            db::update::<Record>("gl_ledger", id_of(&ledger_row)?, &json!({ "indexed_seq": through }))?;
+        }
+        Ok(json!({ "repaired": repaired, "indexed_seq": through, "more": batch.len() == 100 }))
     }
 }
 

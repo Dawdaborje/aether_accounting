@@ -36,6 +36,12 @@ struct Code {
 #[derive(Deserialize)]
 struct Year {
     year: i32,
+    /// The month the fiscal year starts in (1 to 12); calendar years by default.
+    #[serde(default)]
+    start_month: Option<u32>,
+    /// `monthly` (default), `thirteen` (13 four-week periods) or `445`.
+    #[serde(default)]
+    shape: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -48,6 +54,11 @@ struct NewRule {
     memo: Option<String>,
     #[serde(default)]
     currency_path: Option<String>,
+    /// Where the document's own version is in the payload; the entry key follows it.
+    #[serde(default)]
+    version_path: Option<String>,
+    /// Where the document's date is in the payload, or `@today` to use the processing day on purpose.
+    date_path: String,
 }
 
 #[derive(Deserialize)]
@@ -120,17 +131,13 @@ fn fiscal_year(input: Year) -> Result<Vec<Record>> {
     if !(1990..=2100).contains(&input.year) {
         return Err(Error::msg("a year between 1990 and 2100"));
     }
+    let plan = crate::rules::period_plan(input.year, input.start_month.unwrap_or(1), input.shape.as_deref().unwrap_or("monthly"))?;
     let mut made = Vec::new();
-    for month in 1..=12u32 {
-        let name = format!("{}-{month:02}", input.year);
+    for (name, start, end) in plan {
         if db::count("gl_period", Filter::eq("name", name.as_str()))? > 0 {
             continue;
         }
-        let start = NaiveDate::from_ymd_opt(input.year, month, 1).ok_or_else(|| Error::msg("a bad month"))?;
-        made.push(db::create::<Record>(
-            "gl_period",
-            &json!({ "name": name, "start_date": format_date(start), "end_date": format_date(last_day(input.year, month)?), "status": "open" }),
-        )?);
+        made.push(db::create::<Record>("gl_period", &json!({ "name": name, "start_date": format_date(start), "end_date": format_date(end), "status": "open" }))?);
     }
     Ok(made)
 }
@@ -197,6 +204,10 @@ fn new_rule(input: NewRule) -> Result<Record> {
     if let Some(path) = &input.currency_path {
         data["currency_path"] = json!(path);
     }
+    if let Some(path) = &input.version_path {
+        data["version_path"] = json!(path);
+    }
+    data["date_path"] = json!(input.date_path);
     db::create("gl_posting_rule", &data)
 }
 

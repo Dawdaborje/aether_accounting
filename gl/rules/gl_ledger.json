@@ -22,5 +22,17 @@
         "write"
       ]
     }
+  ],
+  "fields": [
+    {
+      "fields": [
+        "seq",
+        "indexed_seq",
+        "base_currency"
+      ],
+      "write_roles": [
+        "via:self"
+      ]
+    }
   ]
 }

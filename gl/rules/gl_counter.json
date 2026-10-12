@@ -1,0 +1,38 @@
+{
+  "model": "gl_counter",
+  "access": [
+    {
+      "name": "read",
+      "roles": [
+        "gl_reader",
+        "gl_accountant",
+        "gl_admin"
+      ],
+      "operations": [
+        "read"
+      ]
+    },
+    {
+      "name": "count",
+      "roles": [
+        "gl_accountant",
+        "gl_admin"
+      ],
+      "operations": [
+        "create",
+        "write"
+      ]
+    }
+  ],
+  "fields": [
+    {
+      "fields": [
+        "next",
+        "key"
+      ],
+      "write_roles": [
+        "via:self"
+      ]
+    }
+  ]
+}

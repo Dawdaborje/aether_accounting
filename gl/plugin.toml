@@ -1,7 +1,8 @@
 [plugin]
 name = "gl"
+icon_path = "assets/logo.svg"
 label = "General ledger"
-version = "0.1.0"
+version = "0.2.1"
 description = "A double-entry ledger whose entries are written once, numbered without gaps and chained by hash."
 long_description = """
 Entries balance exactly (no tolerance, no automatic round-off line) and are written once, with the two
@@ -10,8 +11,8 @@ original, never by changing it. A hash chain over every entry makes tampering vi
 Periods are records that close for good. Other plugins never post to the ledger directly: an event such as an
 an event from another plugin (an approved expense report, a payroll run) becomes an entry through a versioned posting rule once a small glue plugin hands it over, keyed by the document, so the same
 event twice is one entry. Credits against a control account (what an employee is owed) are matched with
-allocation rows, and the open amount of a line is derived from them. Built from a reading of ERPNext accounts
-and Odoo 19 account. Single currency in this version. Written in Rust.
+allocation rows, and the open amount of a line is derived from them.
+Single currency in this version. Written in Rust. 
 """
 authors = [{ name = "Aether", email = "hello@aether.local" }]
 dependencies = []
@@ -24,6 +25,7 @@ access_models = [
   { name = "gl_entry", permissions = ["read", "write"] },
   { name = "gl_line", permissions = ["read", "write"] },
   { name = "gl_allocation", permissions = ["read", "write"] },
+  { name = "gl_counter", permissions = ["read", "write"] },
   { name = "gl_posting_rule", permissions = ["read", "write"] },
 ]
 is_builtin = false

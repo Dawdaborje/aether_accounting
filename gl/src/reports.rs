@@ -7,8 +7,11 @@ use aether_sdk::db::{Figure, Filter};
 use aether_sdk::decimal::Decimal;
 use aether_sdk::prelude::*;
 
-use crate::common::{account_by_code, amount_of, dec, id_of, journal_by_code, require_reader, text, today_date, Record};
-use crate::rules::{canonical, sha256_hex, Line, GENESIS};
+use crate::common::{account_by_code, amount_of, dec, id_of, journal_by_code, ledger, require_reader, text, today_date, Record};
+use crate::rules::{canonical_for, sha256_hex, Facts, Line, GENESIS};
+
+/// Lines a general ledger page holds.
+const LEDGER_PAGE: u32 = 1000;
 
 #[derive(Deserialize, Default)]
 struct Range {
@@ -122,7 +125,16 @@ fn general_ledger(input: Ledger) -> Result<Value> {
             opening = amount_of(&row["debit"])? - amount_of(&row["credit"])?;
         }
     }
-    let lines: Vec<Record> = db::find::<Record>("gl_line").matching(base.and(date_filter(&input.range)?)).order_by("date").limit(1000).all()?;
+    // The closing balance is summed by the database over the whole range, so it is right even when the rows below
+    // are cut off at the limit.
+    let in_range = base.and(date_filter(&input.range)?);
+    let mut closing = opening;
+    let total = db::find::<Record>("gl_line").matching(in_range.clone()).aggregate(&[], &[("debit", Figure::sum("debit")), ("credit", Figure::sum("credit"))])?;
+    if let Some(row) = total.first() {
+        closing = closing + amount_of(&row["debit"])? - amount_of(&row["credit"])?;
+    }
+    let lines: Vec<Record> = db::find::<Record>("gl_line").matching(in_range).order_by("date").limit(LEDGER_PAGE).all()?;
+    let truncated = lines.len() as u32 >= LEDGER_PAGE;
     let entry_ids: Vec<String> = lines.iter().filter_map(|l| text(l, "entry").map(str::to_string)).collect();
     let mut numbers: BTreeMap<String, (String, i64)> = BTreeMap::new();
     for chunk in entry_ids.chunks(100) {
@@ -141,7 +153,8 @@ fn general_ledger(input: Ledger) -> Result<Value> {
             "debit": line["debit"], "credit": line["credit"], "balance": running,
         }));
     }
-    Ok(json!({ "account": account["code"], "opening": opening, "rows": rows, "closing": running }))
+    // When the rows were cut off, `running` stops short of `closing`: the rows shown are the first ones, in date order.
+    Ok(json!({ "account": account["code"], "opening": opening, "rows": rows, "closing": closing, "truncated": truncated, "shown_to_balance": running }))
 }
 
 fn journal_listing(input: Listing) -> Result<Vec<Record>> {
@@ -187,10 +200,28 @@ fn verify(input: Verify) -> Result<Value> {
             problem = Some(format!("{number} does not follow the entry before it"));
             break;
         }
-        let journal_code = journals.iter().find(|j| text(j, "id") == text(entry, "journal")).and_then(|j| text(j, "code")).unwrap_or("?");
+        // From version 2 the code is the one stored on the entry, so renaming a journal changes nothing.
+        let version = entry.get("hash_version").and_then(Value::as_i64).unwrap_or(1);
+        let journal_code = text(entry, "journal_code")
+            .or_else(|| journals.iter().find(|j| text(j, "id") == text(entry, "journal")).and_then(|j| text(j, "code")))
+            .unwrap_or("?");
         let lines: Vec<Line> = entry["lines"].as_array().ok_or_else(|| Error::msg("an entry has no lines"))?.iter().map(line_of).collect::<Result<_>>()?;
         let pairs: Vec<(String, &Line)> = lines.iter().map(|l| (l.account.clone(), l)).collect();
-        let recomputed = sha256_hex(&canonical(&prev_hash, seq, number, text(entry, "date").unwrap_or_default(), journal_code, text(entry, "currency").unwrap_or_default(), &pairs));
+        let facts = Facts {
+            prev_hash: &prev_hash,
+            seq,
+            number,
+            date: text(entry, "date").unwrap_or_default(),
+            journal_code,
+            currency: text(entry, "currency").unwrap_or_default(),
+            reverses: text(entry, "reverses"),
+            source_kind: text(entry, "source_kind"),
+            source_id: text(entry, "source_id"),
+            source_version: entry.get("source_version").and_then(Value::as_i64),
+            reason: text(entry, "reason"),
+            memo: text(entry, "memo"),
+        };
+        let recomputed = sha256_hex(&canonical_for(version, &facts, &pairs));
         if Some(recomputed.as_str()) != text(entry, "hash") {
             problem = Some(format!("{number} was changed after it was posted"));
             break;
@@ -201,8 +232,20 @@ fn verify(input: Verify) -> Result<Value> {
         prev_hash = recomputed;
         expected_seq += 1;
     }
+    // The chain can be intact up to the entry before the ones that were deleted from the end: the ledger's own
+    // counter is the number of the last entry ever posted, so the walk must reach it. Only when the walk ran to
+    // the end of the entries (a page that stopped at the limit has not seen the tail yet).
+    let ledger_seq = ledger()?.get("seq").and_then(Value::as_i64).unwrap_or(0);
+    let last_seq = expected_seq - 1;
+    let reached_end = (entries.len() as u32) < input.limit.unwrap_or(500).min(1000);
+    let mut missing_tail = 0;
+    if problem.is_none() && reached_end && last_seq < ledger_seq {
+        missing_tail = ledger_seq - last_seq;
+        problem = Some(format!("the ledger counts {ledger_seq} entries but the chain ends at {last_seq}: {missing_tail} entr{} removed from the end", if missing_tail == 1 { "y was" } else { "ies were" }));
+    }
     Ok(json!({
-        "checked": entries.len(), "ok": problem.is_none(), "problem": problem, "last_seq": expected_seq - 1, "last_hash": prev_hash,
+        "checked": entries.len(), "ok": problem.is_none(), "problem": problem, "last_seq": last_seq, "last_hash": prev_hash,
+        "ledger_seq": ledger_seq, "missing_tail": missing_tail, "complete": reached_end,
         "entries_without_line_rows": unindexed, "as_of": format_date(today_date()?),
     }))
 }

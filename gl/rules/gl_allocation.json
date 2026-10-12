@@ -36,5 +36,18 @@
         }
       }
     }
+  ],
+  "fields": [
+    {
+      "fields": [
+        "amount",
+        "debit_line",
+        "credit_line",
+        "reverses"
+      ],
+      "write_roles": [
+        "via:self"
+      ]
+    }
   ]
 }

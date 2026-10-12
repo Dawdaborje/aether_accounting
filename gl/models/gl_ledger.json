@@ -29,6 +29,14 @@
       "type": "int",
       "default": 0,
       "help": "The number of the last entry: entries are numbered without gaps."
+    },
+    {
+      "id": "fld_x7z65r8g7x",
+      "name": "indexed_seq",
+      "label": "%indexed_seq%",
+      "type": "int",
+      "default": 0,
+      "help": "Every entry up to this number has its line rows."
     }
   ]
 }

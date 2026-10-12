@@ -1,0 +1,28 @@
+{
+  "model_id": "mdl_t35u8xvay7",
+  "name": "gl_counter",
+  "label": "%gl_counter%",
+  "plural_label": "%gl_counters%",
+  "icon": "hash",
+  "title_field": "key",
+  "fields": [
+    {
+      "id": "fld_vxjzrk47lm",
+      "name": "key",
+      "label": "%key%",
+      "type": "string",
+      "required": true,
+      "max_length": 120,
+      "index": "unique",
+      "help": "journal id and year: each journal numbers each year from 1."
+    },
+    {
+      "id": "fld_f6yia8qpkw",
+      "name": "next",
+      "label": "%next%",
+      "type": "int",
+      "default": 0,
+      "help": "Entries numbered so far in that journal and year."
+    }
+  ]
+}
