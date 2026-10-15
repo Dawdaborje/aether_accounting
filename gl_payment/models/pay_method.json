@@ -1,0 +1,72 @@
+{
+  "model_id": "mdl_k25gxuf4de",
+  "name": "pay_method",
+  "label": "%pay_method%",
+  "plural_label": "%pay_methods%",
+  "icon": "landmark",
+  "title_field": "name",
+  "fields": [
+    {
+      "id": "fld_4qd43ypqee",
+      "name": "name",
+      "label": "%name%",
+      "type": "string",
+      "required": true,
+      "max_length": 80,
+      "index": "unique"
+    },
+    {
+      "id": "fld_py5iiah4z7",
+      "name": "kind",
+      "label": "%kind%",
+      "type": "select",
+      "required": true,
+      "default": "bank",
+      "options": [
+        {
+          "id": "opt_pfk4pwf2r3",
+          "value": "bank",
+          "label": "%bank%"
+        },
+        {
+          "id": "opt_4xiso4vyue",
+          "value": "cash",
+          "label": "%cash%"
+        }
+      ]
+    },
+    {
+      "id": "fld_tillyrayif",
+      "name": "account",
+      "label": "%account%",
+      "type": "string",
+      "required": true,
+      "max_length": 40,
+      "help": "Ledger account code the money moves through."
+    },
+    {
+      "id": "fld_suaaptvyp3",
+      "name": "journal",
+      "label": "%journal%",
+      "type": "string",
+      "required": true,
+      "max_length": 40,
+      "help": "Ledger journal code payments are posted in."
+    },
+    {
+      "id": "fld_yar2awppev",
+      "name": "is_active",
+      "label": "%is_active%",
+      "type": "bool",
+      "default": true
+    }
+  ],
+  "view": {
+    "list": [
+      "name",
+      "kind",
+      "account",
+      "journal"
+    ]
+  }
+}

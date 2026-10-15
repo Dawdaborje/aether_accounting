@@ -7,6 +7,7 @@ A double-entry general ledger plus small bridge plugins that turn HR and ERP eve
 - Append-only entries that balance exactly, gapless journal numbers, and a SHA-256 hash chain
 - Chart of accounts, journals, fiscal periods, control-account allocations
 - Event posting through versioned rules (idempotent per document / version)
+- Payments in and out, matched against invoices and bills, with terms, aging and statements (`gl_payment`)
 - Optional bridges: payroll & expenses (`gl_hrms`), stock / bills / invoices (`gl_erp`)
 - Trial balance, account ledger, journal listing, chain verification
 - Single base currency in this version
@@ -16,6 +17,7 @@ A double-entry general ledger plus small bridge plugins that turn HR and ERP eve
 | Plugin | Role | Design |
 |---|---|---|
 | [`gl`](./gl) | Core ledger (models, posting, reports) | [docs/design.md](./gl/docs/design.md) |
+| [`gl_payment`](./gl_payment) | Open invoices and bills, payments in and out, aging | [docs/design.md](./gl_payment/docs/design.md) |
 | [`gl_hrms`](./gl_hrms) | Forwards HR payroll/expense events → `gl` | [docs/design.md](./gl_hrms/docs/design.md) |
 | [`gl_erp`](./gl_erp) | Forwards ERP stock/bill/invoice events → `gl` | [docs/design.md](./gl_erp/docs/design.md) |
 
@@ -24,6 +26,8 @@ A double-entry general ledger plus small bridge plugins that turn HR and ERP eve
 ```
 hr_payroll / hr_expense ──events──► gl_hrms ──call──► gl.on_posting_event
 erp_inventory / erp_procurement / erp_selling ──events──► gl_erp ──call──► gl
+                                                                 └──call──► gl_payment.register_document
+gl_payment ──call──► gl (post_sourced_entry, allocate_lines) and number_sequence
 ```
 
 - **`gl`** never depends on HR or ERP. It only understands posting-rule event names and payloads.
@@ -38,7 +42,8 @@ Dependencies decide install/load order:
 1. **`gl`** — no plugin dependencies; load first in this workspace.
 2. Upstream domain plugins must already be available when a bridge is installed:
    - `gl_hrms` → `gl`, `hr_payroll`, `hr_expense`
-   - `gl_erp` → `gl`, `erp_inventory`, `erp_procurement`, `erp_selling`
+   - `gl_payment` → `gl`, `number_sequence` (base)
+   - `gl_erp` → `gl`, `gl_payment`, `erp_inventory`, `erp_procurement`, `erp_selling`
 3. Bridges after `gl` and their upstream emitters.
 
-Workspace declaration: `workspace.toml` (`gl`, `gl_hrms`, `gl_erp`).
+Workspace declaration: `workspace.toml` (`gl`, `gl_payment`, `gl_hrms`, `gl_erp`).

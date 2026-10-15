@@ -1,0 +1,178 @@
+{
+  "model_id": "mdl_7mqnvvbeey",
+  "name": "payment",
+  "label": "%payment%",
+  "plural_label": "%payments%",
+  "icon": "banknote",
+  "title_field": "number",
+  "fields": [
+    {
+      "id": "fld_jrk24bpfnh",
+      "name": "direction",
+      "label": "%direction%",
+      "type": "select",
+      "required": true,
+      "index": "plain",
+      "options": [
+        {
+          "id": "opt_xlpibieeyo",
+          "value": "in",
+          "label": "%in%"
+        },
+        {
+          "id": "opt_3tlozs77sk",
+          "value": "out",
+          "label": "%out%"
+        }
+      ]
+    },
+    {
+      "id": "fld_hldpw6cb2y",
+      "name": "number",
+      "label": "%number%",
+      "type": "string",
+      "max_length": 60,
+      "index": "plain"
+    },
+    {
+      "id": "fld_bgec4elclh",
+      "name": "party",
+      "label": "%party%",
+      "type": "string",
+      "required": true,
+      "max_length": 80,
+      "index": "plain"
+    },
+    {
+      "id": "fld_nsvcj2sa4h",
+      "name": "company",
+      "label": "%company%",
+      "type": "string",
+      "max_length": 80,
+      "index": "plain"
+    },
+    {
+      "id": "fld_krhlqhjecb",
+      "name": "method",
+      "label": "%method%",
+      "type": "link",
+      "required": true,
+      "target": "pay_method"
+    },
+    {
+      "id": "fld_34tb4bnzpt",
+      "name": "date",
+      "label": "%date%",
+      "type": "date",
+      "required": true,
+      "index": "plain"
+    },
+    {
+      "id": "fld_4cap6likpi",
+      "name": "amount",
+      "label": "%amount%",
+      "type": "decimal",
+      "required": true,
+      "scale": 2
+    },
+    {
+      "id": "fld_r4mf2py2fs",
+      "name": "reference",
+      "label": "%reference%",
+      "type": "string",
+      "max_length": 120
+    },
+    {
+      "id": "fld_wosgb52mba",
+      "name": "memo",
+      "label": "%memo%",
+      "type": "string",
+      "max_length": 300
+    },
+    {
+      "id": "fld_no53tlkoro",
+      "name": "state",
+      "label": "%state%",
+      "type": "select",
+      "required": true,
+      "default": "draft",
+      "index": "plain",
+      "options": [
+        {
+          "id": "opt_5crbmqjzbp",
+          "value": "draft",
+          "label": "%draft%"
+        },
+        {
+          "id": "opt_uh2qnvz3ki",
+          "value": "confirmed",
+          "label": "%confirmed%"
+        },
+        {
+          "id": "opt_mscqz7kmns",
+          "value": "cancelled",
+          "label": "%cancelled%"
+        }
+      ]
+    },
+    {
+      "id": "fld_duejrk45nq",
+      "name": "created_by",
+      "label": "%created_by%",
+      "type": "string",
+      "max_length": 80
+    },
+    {
+      "id": "fld_2bdlsrgviy",
+      "name": "confirmed_by",
+      "label": "%confirmed_by%",
+      "type": "string",
+      "max_length": 80
+    },
+    {
+      "id": "fld_wrvu2xt3rg",
+      "name": "cancelled_by",
+      "label": "%cancelled_by%",
+      "type": "string",
+      "max_length": 80
+    },
+    {
+      "id": "fld_vpe7qkw2kw",
+      "name": "cancel_reason",
+      "label": "%cancel_reason%",
+      "type": "string",
+      "max_length": 300
+    },
+    {
+      "id": "fld_46pbalqzl4",
+      "name": "gl_entry",
+      "label": "%gl_entry%",
+      "type": "string",
+      "max_length": 80
+    },
+    {
+      "id": "fld_adn66244rc",
+      "name": "gl_line",
+      "label": "%gl_line%",
+      "type": "string",
+      "max_length": 80
+    },
+    {
+      "id": "fld_fi43fjdgj2",
+      "name": "reverse_entry",
+      "label": "%reverse_entry%",
+      "type": "string",
+      "max_length": 80
+    }
+  ],
+  "view": {
+    "list": [
+      "number",
+      "direction",
+      "party",
+      "date",
+      "amount",
+      "state"
+    ]
+  }
+}

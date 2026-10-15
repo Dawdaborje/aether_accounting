@@ -2,7 +2,7 @@
 name = "gl"
 icon_path = "assets/logo.svg"
 label = "General ledger"
-version = "0.2.1"
+version = "0.3.0"
 description = "A double-entry ledger whose entries are written once, numbered without gaps and chained by hash."
 long_description = """
 Entries balance exactly (no tolerance, no automatic round-off line) and are written once, with the two

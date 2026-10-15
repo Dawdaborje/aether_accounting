@@ -1,0 +1,49 @@
+{
+  "model_id": "mdl_adyhcqega4",
+  "name": "pay_term",
+  "label": "%pay_term%",
+  "plural_label": "%pay_terms%",
+  "icon": "calendar-clock",
+  "title_field": "name",
+  "fields": [
+    {
+      "id": "fld_n7tdg2oviv",
+      "name": "name",
+      "label": "%name%",
+      "type": "string",
+      "required": true,
+      "max_length": 80,
+      "index": "unique"
+    },
+    {
+      "id": "fld_2csdhqedpg",
+      "name": "net_days",
+      "label": "%net_days%",
+      "type": "int",
+      "required": true,
+      "default": 30
+    },
+    {
+      "id": "fld_xjs3h3g2ts",
+      "name": "end_of_month",
+      "label": "%end_of_month%",
+      "type": "bool",
+      "default": false,
+      "help": "The due date moves to the last day of its month."
+    },
+    {
+      "id": "fld_tso6pceqqq",
+      "name": "is_active",
+      "label": "%is_active%",
+      "type": "bool",
+      "default": true
+    }
+  ],
+  "view": {
+    "list": [
+      "name",
+      "net_days",
+      "end_of_month"
+    ]
+  }
+}

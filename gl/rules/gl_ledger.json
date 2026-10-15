@@ -21,6 +21,15 @@
         "create",
         "write"
       ]
+    },
+    {
+      "name": "post",
+      "roles": [
+        "gl_accountant"
+      ],
+      "operations": [
+        "write"
+      ]
     }
   ],
   "fields": [
@@ -32,6 +41,14 @@
       ],
       "write_roles": [
         "via:self"
+      ]
+    },
+    {
+      "fields": [
+        "name"
+      ],
+      "write_roles": [
+        "gl_admin"
       ]
     }
   ]

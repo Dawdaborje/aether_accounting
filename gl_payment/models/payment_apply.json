@@ -1,0 +1,61 @@
+{
+  "model_id": "mdl_a52dm3sx45",
+  "name": "payment_apply",
+  "label": "%payment_apply%",
+  "plural_label": "%payment_applies%",
+  "icon": "link",
+  "title_field": "document",
+  "fields": [
+    {
+      "id": "fld_bmlh6toexw",
+      "name": "payment",
+      "label": "%payment%",
+      "type": "link",
+      "required": true,
+      "index": "plain",
+      "target": "payment"
+    },
+    {
+      "id": "fld_6j66rf56su",
+      "name": "document",
+      "label": "%document%",
+      "type": "link",
+      "required": true,
+      "index": "plain",
+      "target": "pay_document"
+    },
+    {
+      "id": "fld_iruxd3lk5n",
+      "name": "amount",
+      "label": "%amount%",
+      "type": "decimal",
+      "required": true,
+      "scale": 2
+    },
+    {
+      "id": "fld_7gbuqaysjk",
+      "name": "key",
+      "label": "%key%",
+      "type": "string",
+      "required": true,
+      "max_length": 200,
+      "index": "unique",
+      "help": "Payment and document: one row each."
+    },
+    {
+      "id": "fld_f3tknrluuf",
+      "name": "allocation",
+      "label": "%allocation%",
+      "type": "string",
+      "max_length": 80,
+      "help": "The ledger allocation once written."
+    }
+  ],
+  "view": {
+    "list": [
+      "payment",
+      "document",
+      "amount"
+    ]
+  }
+}

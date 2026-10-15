@@ -29,6 +29,23 @@ struct Items {
     party: Option<String>,
 }
 
+#[derive(Deserialize)]
+struct Lines {
+    lines: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct BySource {
+    source_kind: String,
+    source_id: String,
+    account: String,
+    #[serde(default)]
+    party: Option<String>,
+}
+
+/// Lines asked about in one call.
+const DETAIL_PAGE: usize = 200;
+
 /// Lines looked at for open items in one call.
 const OPEN_PAGE: u32 = 1000;
 
@@ -214,7 +231,82 @@ fn auto_allocate(input: Items) -> Result<Value> {
     }))
 }
 
+/// Each line with what is still open on it and the allocations that touch it, so a plugin that keeps documents
+/// (payments) can work out what is settled without reading the ledger's tables.
+fn details(input: Lines) -> Result<Value> {
+    require_reader()?;
+    if input.lines.len() > DETAIL_PAGE {
+        return Err(Error::msg(format!("ask about at most {DETAIL_PAGE} lines at a time")));
+    }
+    let mut codes: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::new();
+    let mut out = Vec::new();
+    for id in &input.lines {
+        let Some(line) = db::get::<Record>("gl_line", id)? else {
+            out.push(json!({ "line": id, "missing": true }));
+            continue;
+        };
+        let debit_side = dec(&line, "debit")? > zero();
+        let account_id = text(&line, "account").unwrap_or_default().to_string();
+        if !codes.contains_key(&account_id) {
+            let code = db::get::<Record>("gl_account", &account_id)?.and_then(|a| text(&a, "code").map(str::to_string)).unwrap_or_default();
+            codes.insert(account_id.clone(), code);
+        }
+        let link = if debit_side { "debit_line" } else { "credit_line" };
+        let rows: Vec<Record> = db::find("gl_allocation").filter(link, id.as_str()).limit(1000).all()?;
+        let mut amounts = Vec::new();
+        let mut allocations = Vec::new();
+        for row in &rows {
+            amounts.push(dec(row, "amount")?);
+            allocations.push(json!({
+                "id": row["id"], "debit_line": row["debit_line"], "credit_line": row["credit_line"], "amount": row["amount"], "reverses": row["reverses"],
+            }));
+        }
+        let amount = dec(&line, if debit_side { "debit" } else { "credit" })?;
+        out.push(json!({
+            "line": id, "entry": line["entry"], "date": line["date"], "account": codes[&account_id], "party": line["party"],
+            "side": if debit_side { "debit" } else { "credit" }, "amount": amount, "open": open_amount(amount, &amounts), "allocations": allocations,
+        }));
+    }
+    Ok(json!({ "lines": out }))
+}
+
+/// The lines on an account of the entries posted for a document, leaving out entries that were reversed and the
+/// reversals themselves. Several entries come back when the document was posted again at a new version.
+fn by_source(input: BySource) -> Result<Value> {
+    require_reader()?;
+    let account = account_by_code(&input.account)?;
+    let entries: Vec<Record> = db::find("gl_entry").filter("source_kind", input.source_kind.as_str()).filter("source_id", input.source_id.as_str()).order_by("seq").limit(100).all()?;
+    let mut out = Vec::new();
+    for entry in &entries {
+        let entry_id = id_of(entry)?;
+        if db::count("gl_entry", Filter::eq("reverses", entry_id))? > 0 {
+            continue;
+        }
+        let mut find = db::find::<Record>("gl_line").filter("entry", entry_id).filter("account", id_of(&account)?).limit(100);
+        if let Some(party) = &input.party {
+            find = find.filter("party", party.as_str());
+        }
+        for line in find.all()? {
+            out.push(json!({
+                "line": line["id"], "entry": entry_id, "number": entry["number"], "seq": entry["seq"], "date": line["date"], "party": line["party"],
+                "debit": line["debit"], "credit": line["credit"], "source_version": entry["source_version"],
+            }));
+        }
+    }
+    Ok(json!({ "lines": out }))
+}
+
 handler! {
+    /// What is open on each line and the allocations touching it (at most 200 lines a call).
+    fn line_details(input: Lines) -> Value {
+        details(input)
+    }
+
+    /// The lines on one account of the entries posted for a document (by source kind and id).
+    fn source_lines(input: BySource) -> Value {
+        by_source(input)
+    }
+
     fn allocate_lines(input: Allocate) -> Record {
         allocate(input)
     }

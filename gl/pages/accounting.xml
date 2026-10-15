@@ -1,4 +1,4 @@
-<page route="/accounting" title="Journal entries" model="gl_entry">
+<page route="/accounting" title="Journal entries" model="gl_entry" icon="scale">
   <view type="list" model="gl_entry" source="journal_listing_report">
     <search/>
     <columns>

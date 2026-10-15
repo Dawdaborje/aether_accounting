@@ -1,0 +1,62 @@
+[plugin]
+name = "gl_payment"
+icon_path = "assets/logo.svg"
+label = "Payments"
+version = "0.1.0"
+description = "What customers and suppliers owe, document by document, and the payments that settle it."
+long_description = """
+Invoices, bills and other documents are registered here by the bridge plugins once they are approved, with a
+due date from the party's payment term. A payment in or out is drafted, then confirmed: it gets a number from
+number_sequence, is posted to the general ledger (bank against the receivable or payable control account) and is
+matched against the documents it pays with ledger allocations, so the ledger stays the only record of what is
+open. Confirming again after a failure finishes the job without posting twice. An outgoing payment is confirmed
+by someone other than the person who drafted it. Cancelling undoes the matches and reverses the entry. Aging,
+outstanding documents and party statements read what is open from the ledger. Single currency, like the ledger.
+Written in Rust. See docs/design.md in this plugin (gl_payment/docs/design.md).
+"""
+authors = [{ name = "Aether", email = "hello@aether.local" }]
+dependencies = ["gl", "number_sequence"]
+capabilities = ["db::query", "db::mutate", "db::transaction", "plugins::call", "events::emit"]
+access_models = [
+  { name = "pay_setting", permissions = ["read", "write"] },
+  { name = "pay_term", permissions = ["read", "write"] },
+  { name = "pay_party_term", permissions = ["read", "write"] },
+  { name = "pay_method", permissions = ["read", "write"] },
+  { name = "pay_document", permissions = ["read", "write"] },
+  { name = "payment", permissions = ["read", "write"] },
+  { name = "payment_apply", permissions = ["read", "write"] },
+]
+is_builtin = false
+wasm_file = "out/plugin.wasm"
+
+[[roles]]
+name = "pay_clerk"
+label = "Payment clerk"
+description = "Drafts payments and chooses the documents they settle; an accountant confirms them"
+
+[[events]]
+name = "payment_confirmed"
+
+[[events]]
+name = "payment_cancelled"
+
+[[events]]
+name = "document_settled"
+
+[[schedule]]
+name = "link-documents"
+function = "link_documents"
+every = "10m"
+
+[app]
+icon = "banknote"
+route = "/accounting/payments"
+description = "Payments, open invoices and bills"
+roles = ["pay_clerk", "gl.gl_reader", "gl.gl_accountant", "gl.gl_admin"]
+
+[plugin.api]
+version = "0.1"
+
+[plugin.meta]
+kind = "addon"
+workspace = "accounting"

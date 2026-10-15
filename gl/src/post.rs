@@ -65,6 +65,27 @@ struct PostInput {
     lines: Vec<LineInput>,
 }
 
+/// The document behind an entry posted by another plugin's function (a payment).
+#[derive(Deserialize)]
+struct SourceInput {
+    kind: String,
+    id: String,
+    #[serde(default)]
+    version: Option<i64>,
+}
+
+#[derive(Deserialize)]
+struct SourcedInput {
+    journal: String,
+    date: String,
+    #[serde(default)]
+    memo: Option<String>,
+    #[serde(default)]
+    currency: Option<String>,
+    lines: Vec<LineInput>,
+    source: SourceInput,
+}
+
 #[derive(Deserialize)]
 struct Reverse {
     id: String,
@@ -276,6 +297,31 @@ fn post_manual(input: PostInput) -> Result<Record> {
     post(Posting { journal: input.journal, date: input.date, memo: input.memo, currency: input.currency, lines, source: None, reverses: None, reason: None })
 }
 
+/// An entry for a document, posted by a person through the plugin that owns the document: the same document at
+/// the same version is the same entry, so a retried call never posts twice. The kind and key start with `doc:`,
+/// so they can never be the key of an event's document.
+fn post_sourced(input: SourcedInput) -> Result<Record> {
+    require_accountant()?;
+    let (kind, id) = (input.source.kind.trim(), input.source.id.trim());
+    if kind.is_empty() || id.is_empty() {
+        return Err(Error::msg("name the document: source kind and id"));
+    }
+    let kind = format!("doc:{kind}");
+    let version = input.source.version.unwrap_or(1);
+    let key = format!("{kind}:{id}:d{version}");
+    let lines = input.lines.into_iter().map(to_line).collect::<Result<Vec<_>>>()?;
+    post(Posting {
+        journal: input.journal,
+        date: input.date,
+        memo: input.memo,
+        currency: input.currency,
+        lines,
+        source: Some(Source { kind, id: id.to_string(), version: Some(version), rule_version: 0, key }),
+        reverses: None,
+        reason: None,
+    })
+}
+
 fn reverse(input: Reverse) -> Result<Record> {
     require_accountant()?;
     let original = require("gl_entry", &input.id, "entry")?;
@@ -289,8 +335,21 @@ fn reverse(input: Reverse) -> Result<Record> {
         return Err(Error::msg("this entry is already reversed"));
     }
     let line_ids: Vec<String> = db::find::<Record>("gl_line").filter("entry", input.id.as_str()).limit(100).all()?.iter().filter_map(|l| text(l, "id").map(str::to_string)).collect();
-    if !line_ids.is_empty() && db::count("gl_allocation", Filter::one_of("debit_line", line_ids.clone()).or(Filter::one_of("credit_line", line_ids)))? > 0 {
-        return Err(Error::msg("some of its lines are matched against others: undo those allocations first"));
+    if !line_ids.is_empty() {
+        // An undone allocation keeps its row next to the negative one that undoes it: only what is still matched
+        // between two lines counts.
+        let rows: Vec<Record> =
+            db::find("gl_allocation").matching(Filter::one_of("debit_line", line_ids.clone()).or(Filter::one_of("credit_line", line_ids))).limit(1000).all()?;
+        let mut net: std::collections::BTreeMap<(String, String), Decimal> = std::collections::BTreeMap::new();
+        for row in &rows {
+            let pair = (text(row, "debit_line").unwrap_or_default().to_string(), text(row, "credit_line").unwrap_or_default().to_string());
+            let amount = crate::common::dec(row, "amount")?;
+            let sum = net.entry(pair).or_insert_with(|| Decimal::zero(2));
+            *sum = *sum + amount;
+        }
+        if net.values().any(|sum| !sum.is_zero()) {
+            return Err(Error::msg("some of its lines are matched against others: undo those allocations first"));
+        }
     }
     let journal = require("gl_journal", text(&original, "journal").unwrap_or_default(), "journal")?;
     let mut lines = Vec::new();
@@ -402,6 +461,12 @@ handler! {
     /// Post an entry by hand.
     fn post_entry(input: PostInput) -> Record {
         post_manual(input)
+    }
+
+    /// Post an entry for a document another plugin owns (a payment); calling again for the same document and
+    /// version returns the entry already posted.
+    fn post_sourced_entry(input: SourcedInput) -> Record {
+        post_sourced(input)
     }
 
     /// Correct an entry by posting its mirror image.

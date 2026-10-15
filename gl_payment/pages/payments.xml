@@ -1,0 +1,14 @@
+<page route="/accounting/payments" title="Payments" model="payment" icon="banknote">
+  <view type="list" model="payment" source="payment_register">
+    <search/>
+    <columns>
+      <column field="number" label="Payment"/>
+      <column field="direction" label="In / out"/>
+      <column field="party" label="Party"/>
+      <column field="date" label="Date"/>
+      <column field="amount" label="Amount"/>
+      <column field="state" label="State"/>
+    </columns>
+    <empty title="No payments" description="Payments appear when a clerk or an accountant records money received or paid."/>
+  </view>
+</page>

@@ -12,13 +12,29 @@ fn should_skip(received: &Received) -> bool {
         .unwrap_or(false)
 }
 
+/// An approved invoice or bill as a document `gl_payment` keeps open until it is paid; none for stock events.
+fn as_document(received: &Received) -> Option<Value> {
+    let p = &received.payload;
+    let (side, id, party, date) = match received.event.as_str() {
+        "erp_selling.sales_invoice_approved" => ("receivable", "invoice", "customer", "invoice_date"),
+        "erp_procurement.purchase_bill_approved" => ("payable", "bill", "supplier", "bill_date"),
+        _ => return None,
+    };
+    Some(json!({
+        "side": side, "source_kind": received.event, "source_id": p[id], "version": p["source_version"], "number": p["number"],
+        "party": p[party], "company": p["company"], "currency": p["currency"], "date": p[date], "total": p["total"],
+        "due_date": p.get("due_date"),
+    }))
+}
+
 handler! {
-    /// Delivered by the kernel for each listened event. Transfers are not posted.
+    /// Delivered by the kernel for each listened event. Transfers are not posted. Invoices and bills are also
+    /// registered with `gl_payment`; both calls are safe to repeat, so a failed delivery is simply tried again.
     fn forward(received: Received) -> Value {
         if should_skip(&received) {
             return Ok(json!({ "posted": false, "skipped": "transfer" }));
         }
-        plugins::call(
+        let posted: Value = plugins::call(
             "gl",
             "on_posting_event",
             &json!({
@@ -28,7 +44,12 @@ handler! {
                 "emitted_by": received.emitted_by,
                 "depth": received.depth,
             }),
-        )
+        )?;
+        if let Some(document) = as_document(&received) {
+            let registered: Value = plugins::call("gl_payment", "register_document", &document)?;
+            return Ok(json!({ "posted": posted, "document": registered["id"] }));
+        }
+        Ok(posted)
     }
 
     /// Example posting-rule lines for stock events (account codes are placeholders).
@@ -103,7 +124,7 @@ handler! {
                     "memo": "Purchase bill",
                     "lines": [
                         { "side": "debit", "account": "2000", "amount": "grni_clear" },
-                        { "side": "credit", "account": "2100", "amount": "ap_total" },
+                        { "side": "credit", "account": "2100", "amount": "ap_total", "party": "supplier" },
                         { "side": "debit", "account": "5200", "amount": "variance" }
                     ],
                     "accounts": {
@@ -113,7 +134,7 @@ handler! {
                     }
                 }
             },
-            "note": "Create an AP journal, map codes to your chart, then call gl.create_posting_rule. When bill total equals GRNI, variance is zero and that line is dropped."
+            "note": "Create an AP journal, map codes to your chart (2100 must be a control account), then call gl.create_posting_rule. When bill total equals GRNI, variance is zero and that line is dropped."
         }))
     }
 
@@ -128,7 +149,7 @@ handler! {
                     "currency_path": "currency",
                     "memo": "Sales invoice",
                     "lines": [
-                        { "side": "debit", "account": "1100", "amount": "ar_total" },
+                        { "side": "debit", "account": "1100", "amount": "ar_total", "party": "customer" },
                         { "side": "credit", "account": "4000", "amount": "revenue" }
                     ],
                     "accounts": {
@@ -137,7 +158,7 @@ handler! {
                     }
                 }
             },
-            "note": "Create an AR journal, map codes to your chart, then call gl.create_posting_rule. Inventory/COGS come from erp_inventory.stock_posted on delivery."
+            "note": "Create an AR journal, map codes to your chart (1100 must be a control account), then call gl.create_posting_rule. Inventory/COGS come from erp_inventory.stock_posted on delivery."
         }))
     }
 }

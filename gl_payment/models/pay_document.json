@@ -1,0 +1,168 @@
+{
+  "model_id": "mdl_oa2nsmkmaw",
+  "name": "pay_document",
+  "label": "%pay_document%",
+  "plural_label": "%pay_documents%",
+  "icon": "file-text",
+  "title_field": "number",
+  "fields": [
+    {
+      "id": "fld_rrpyeawqv2",
+      "name": "side",
+      "label": "%side%",
+      "type": "select",
+      "required": true,
+      "index": "plain",
+      "options": [
+        {
+          "id": "opt_nf65olm47h",
+          "value": "receivable",
+          "label": "%receivable%"
+        },
+        {
+          "id": "opt_hxtafev5tm",
+          "value": "payable",
+          "label": "%payable%"
+        }
+      ]
+    },
+    {
+      "id": "fld_c4tor2mtp3",
+      "name": "source_kind",
+      "label": "%source_kind%",
+      "type": "string",
+      "required": true,
+      "max_length": 120
+    },
+    {
+      "id": "fld_oodpv3f2q6",
+      "name": "source_id",
+      "label": "%source_id%",
+      "type": "string",
+      "required": true,
+      "max_length": 120
+    },
+    {
+      "id": "fld_4yfss5mmwz",
+      "name": "key",
+      "label": "%key%",
+      "type": "string",
+      "required": true,
+      "max_length": 250,
+      "index": "unique",
+      "help": "Source kind and id."
+    },
+    {
+      "id": "fld_amayg4v47m",
+      "name": "version",
+      "label": "%version%",
+      "type": "int",
+      "default": 1
+    },
+    {
+      "id": "fld_5d7jgdz2v4",
+      "name": "number",
+      "label": "%number%",
+      "type": "string",
+      "max_length": 60,
+      "index": "plain"
+    },
+    {
+      "id": "fld_umrpmmxfha",
+      "name": "party",
+      "label": "%party%",
+      "type": "string",
+      "required": true,
+      "max_length": 80,
+      "index": "plain"
+    },
+    {
+      "id": "fld_e6kq2y4yje",
+      "name": "company",
+      "label": "%company%",
+      "type": "string",
+      "max_length": 80,
+      "index": "plain"
+    },
+    {
+      "id": "fld_jcy675nyq6",
+      "name": "currency",
+      "label": "%currency%",
+      "type": "string",
+      "max_length": 8
+    },
+    {
+      "id": "fld_mjtl2lwal2",
+      "name": "date",
+      "label": "%date%",
+      "type": "date",
+      "required": true
+    },
+    {
+      "id": "fld_elosxh2mbh",
+      "name": "due_date",
+      "label": "%due_date%",
+      "type": "date",
+      "required": true,
+      "index": "plain"
+    },
+    {
+      "id": "fld_ow75r3kpb3",
+      "name": "total",
+      "label": "%total%",
+      "type": "decimal",
+      "required": true,
+      "scale": 2
+    },
+    {
+      "id": "fld_6firn64iju",
+      "name": "gl_line",
+      "label": "%gl_line%",
+      "type": "string",
+      "max_length": 80,
+      "help": "The document's line on the control account, once the ledger has posted it."
+    },
+    {
+      "id": "fld_vgulrvjdiq",
+      "name": "gl_entry_number",
+      "label": "%gl_entry_number%",
+      "type": "string",
+      "max_length": 40
+    },
+    {
+      "id": "fld_p3uzulsi36",
+      "name": "state",
+      "label": "%state%",
+      "type": "select",
+      "required": true,
+      "default": "open",
+      "index": "plain",
+      "options": [
+        {
+          "id": "opt_ixduji5jog",
+          "value": "open",
+          "label": "%open%"
+        },
+        {
+          "id": "opt_ltlv3ipdzp",
+          "value": "settled",
+          "label": "%settled%"
+        },
+        {
+          "id": "opt_e2phhhu37v",
+          "value": "void",
+          "label": "%void%"
+        }
+      ]
+    }
+  ],
+  "view": {
+    "list": [
+      "number",
+      "party",
+      "due_date",
+      "total",
+      "state"
+    ]
+  }
+}

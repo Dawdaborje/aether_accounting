@@ -12,5 +12,6 @@ See each plugin's docs/design.md (start with gl/docs/design.md).
 
 [workspace.plugins]
 gl = { path = "./gl" }
+gl_payment = { path = "./gl_payment" }
 gl_hrms = { path = "./gl_hrms" }
 gl_erp = { path = "./gl_erp" }
