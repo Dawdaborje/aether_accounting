@@ -52,6 +52,56 @@ handler! {
         Ok(posted)
     }
 
+    /// Manufacturing order done: labour and overhead absorbed into finished goods (materials are in the stock events).
+    fn labour_rule_templates(_: Empty) -> Value {
+        Ok(json!({
+            "events": {
+                "erp_manufacturing.mo_completed": {
+                    "source_path": "mo",
+                    "version_path": "source_version",
+                    "date_path": "posting_date",
+                    "currency_path": "currency",
+                    "memo": "Manufacturing labour absorbed",
+                    "lines": [
+                        { "side": "debit", "account": "1450", "amount": "labour_cost" },
+                        { "side": "credit", "account": "5300", "amount": "labour_cost" }
+                    ],
+                    "accounts": {
+                        "1450": "Work in progress",
+                        "5300": "Manufacturing labour and overhead absorbed"
+                    }
+                }
+            },
+            "note": "Finished goods are received at materials plus this labour; the produce event credits WIP for the whole value, so this entry clears the labour part of WIP."
+        }))
+    }
+
+    /// Credit note (sales credit): reverse the invoice's lines. Matched against the invoice by `gl` allocation.
+    fn credit_note_rule_templates(_: Empty) -> Value {
+        Ok(json!({
+            "events": {
+                "erp_selling.sales_credit_note_approved": {
+                    "source_path": "invoice",
+                    "version_path": "source_version",
+                    "date_path": "invoice_date",
+                    "currency_path": "currency",
+                    "memo": "Sales credit note",
+                    "lines": [
+                        { "side": "credit", "account": "1100", "amount": "ar_total", "party": "customer" },
+                        { "side": "debit", "account": "4000", "amount": "revenue" },
+                        { "side": "debit", "account": "2200", "amount": "tax_total" }
+                    ],
+                    "accounts": {
+                        "1100": "Accounts receivable",
+                        "2200": "Output tax payable",
+                        "4000": "Sales revenue"
+                    }
+                }
+            },
+            "note": "Create the rule on the AR journal. Crediting the customer's control account lets `gl` allocate it against the original invoice. Returned stock credits COGS from the stock event."
+        }))
+    }
+
     /// Example posting-rule lines for stock events (account codes are placeholders).
     /// An administrator creates journals/accounts, then `gl.create_posting_rule` with these templates.
     fn stock_rule_templates(_: Empty) -> Value {
@@ -85,6 +135,19 @@ handler! {
                         "5100": "Inventory adjustment",
                         "5200": "Purchase price variance"
                     }
+                },
+                "erp_inventory.stock_revalued": {
+                    "source_path": "landed_cost",
+                    "version_path": "source_version",
+                    "date_path": "posting_date",
+                    "currency_path": "currency",
+                    "memo": "Landed cost",
+                    "lines": [
+                        { "side": "debit", "account": "1400", "amount": "inventory_in" },
+                        { "side": "debit", "account": "5000", "amount": "cogs" },
+                        { "side": "debit", "account": "5200", "amount": "variance_debit" },
+                        { "side": "credit", "account": "2000", "amount": "clearing" }
+                    ]
                 },
                 "erp_inventory.stock_voided": {
                     "source_path": "move",
@@ -124,17 +187,45 @@ handler! {
                     "memo": "Purchase bill",
                     "lines": [
                         { "side": "debit", "account": "2000", "amount": "grni_clear" },
+                        { "side": "debit", "account": "1300", "amount": "tax_total" },
                         { "side": "credit", "account": "2100", "amount": "ap_total", "party": "supplier" },
                         { "side": "debit", "account": "5200", "amount": "variance" }
                     ],
                     "accounts": {
+                        "1300": "Input tax receivable",
                         "2000": "Goods received not invoiced",
                         "2100": "Accounts payable",
                         "5200": "Purchase price variance"
                     }
                 }
             },
-            "note": "Create an AP journal, map codes to your chart (2100 must be a control account), then call gl.create_posting_rule. When bill total equals GRNI, variance is zero and that line is dropped."
+            "note": "Create an AP journal, map codes to your chart (2100 must be a control account), then call gl.create_posting_rule. Tax and variance lines are dropped when zero; taxes come from `erp_pricing` on each bill line."
+        }))
+    }
+
+    /// Debit note (purchase credit): reverse the bill's lines. Matched against the bill by `gl` allocation.
+    fn debit_note_rule_templates(_: Empty) -> Value {
+        Ok(json!({
+            "events": {
+                "erp_procurement.purchase_debit_note_approved": {
+                    "source_path": "bill",
+                    "version_path": "source_version",
+                    "date_path": "bill_date",
+                    "currency_path": "currency",
+                    "memo": "Purchase debit note",
+                    "lines": [
+                        { "side": "debit", "account": "2100", "amount": "ap_total", "party": "supplier" },
+                        { "side": "credit", "account": "2000", "amount": "grni_credit" },
+                        { "side": "credit", "account": "1300", "amount": "tax_total" }
+                    ],
+                    "accounts": {
+                        "1300": "Input tax receivable",
+                        "2000": "Goods received not invoiced",
+                        "2100": "Accounts payable"
+                    }
+                }
+            },
+            "note": "Create the rule on the AP journal. Debiting the supplier's control account lets `gl` allocate it against the original bill."
         }))
     }
 
@@ -150,9 +241,11 @@ handler! {
                     "memo": "Sales invoice",
                     "lines": [
                         { "side": "debit", "account": "1100", "amount": "ar_total", "party": "customer" },
-                        { "side": "credit", "account": "4000", "amount": "revenue" }
+                        { "side": "credit", "account": "4000", "amount": "revenue" },
+                        { "side": "credit", "account": "2200", "amount": "tax_total" }
                     ],
                     "accounts": {
+                        "2200": "Output tax payable",
                         "1100": "Accounts receivable",
                         "4000": "Sales revenue"
                     }

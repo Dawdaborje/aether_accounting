@@ -6,12 +6,12 @@ version = "0.1.0"
 description = "Turns what payroll and expenses announce into ledger entries, so neither the ledger nor HR depends on the other."
 long_description = """
 The general ledger (`gl`) knows nothing about HR and the HR plugins know nothing about accounting. This plugin
-sits between them: it listens to `hr_payroll.payroll_run_approved` and `hr_expense.report_approved` and hands each
-event to the ledger, which turns it into an entry by its versioned posting rules. Install it only when you want
+sits between them: it listens to `hr_payroll.payroll_run_approved`, `payroll_run_paid` and `payroll_correction_approved`,
+`hr_expense.report_approved` and `advance_approved`, `hr_loan.loan_disbursed`, and `hr_insurance.premium_accrued` and `premium_paid`, and hands each event to the ledger, which turns it into an entry by its versioned posting rules. Install it only when you want
 both. Written in Rust.
 """
 authors = [{ name = "Aether", email = "hello@aether.local" }]
-dependencies = ["gl", "hr_payroll", "hr_expense"]
+dependencies = ["gl", "hr_payroll", "hr_expense", "hr_loan", "hr_insurance"]
 capabilities = ["events::subscribe", "plugins::call"]
 access_models = []
 is_builtin = false
@@ -24,6 +24,36 @@ handler = "forward"
 
 [[events]]
 name = "hr_expense.report_approved"
+direction = "listen"
+handler = "forward"
+
+[[events]]
+name = "hr_payroll.payroll_run_paid"
+direction = "listen"
+handler = "forward"
+
+[[events]]
+name = "hr_payroll.payroll_correction_approved"
+direction = "listen"
+handler = "forward"
+
+[[events]]
+name = "hr_loan.loan_disbursed"
+direction = "listen"
+handler = "forward"
+
+[[events]]
+name = "hr_expense.advance_approved"
+direction = "listen"
+handler = "forward"
+
+[[events]]
+name = "hr_insurance.premium_accrued"
+direction = "listen"
+handler = "forward"
+
+[[events]]
+name = "hr_insurance.premium_paid"
 direction = "listen"
 handler = "forward"
 

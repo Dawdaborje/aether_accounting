@@ -164,8 +164,46 @@ pub fn due_date(settings: &Record, party: &str, side: &str, date: &str) -> Resul
     Ok(format_date(due))
 }
 
+/// Settings for an organization that has none, against the accounts and journals the `gl` seed
+/// creates (1100 receivable, 2100 payable, 1010 cash, 1020 bank): the two payment sequences, two
+/// terms and a bank and a cash method. Each only when missing; nothing that exists is changed.
+/// The ledger's accounts are not checked here (the kernel holds no ledger role), so an
+/// organization that built its own chart sets payments up by hand instead.
+fn seed() -> Result<Value> {
+    ensure_sequence("pay_in", "Incoming payments", "PAY-IN-{YYYY}-")?;
+    ensure_sequence("pay_out", "Outgoing payments", "PAY-OUT-{YYYY}-")?;
+    let mut terms = 0;
+    for (name, days) in [("Due on receipt", 0), ("Net 30", 30)] {
+        if db::find::<Record>("pay_term").filter("name", name).first()?.is_none() {
+            db::create::<Record>("pay_term", &json!({ "name": name, "net_days": days, "end_of_month": false, "is_active": true }))?;
+            terms += 1;
+        }
+    }
+    let mut methods = 0;
+    for (name, kind, account, journal) in [("Bank transfer", "bank", "1020", "BNK"), ("Cash", "cash", "1010", "CSH")] {
+        if db::find::<Record>("pay_method").filter("name", name).first()?.is_none() {
+            db::create::<Record>("pay_method", &json!({ "name": name, "kind": kind, "account": account, "journal": journal, "is_active": true }))?;
+            methods += 1;
+        }
+    }
+    let mut settings = false;
+    if db::find::<Record>("pay_setting").first()?.is_none() {
+        db::create::<Record>(
+            "pay_setting",
+            &json!({ "receivable_account": "1100", "payable_account": "2100", "seq_in": "pay_in", "seq_out": "pay_out", "four_eyes_out": true }),
+        )?;
+        settings = true;
+    }
+    Ok(json!({ "settings": settings, "terms": terms, "methods": methods }))
+}
+
 handler! {
     /// Set the receivable and payable control accounts, default terms and numbering; run again to change them.
+    /// Default payment settings, terms and methods when there are none; runs on install and upgrade.
+    fn seed_payments(_: Empty) -> Value {
+        seed()
+    }
+
     fn setup_payments(input: Setup) -> Record {
         setup(input)
     }

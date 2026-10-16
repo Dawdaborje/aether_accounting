@@ -1,10 +1,10 @@
 //! The ledger itself, accounts, journals, periods and posting rules.
 
-use aether_sdk::dates::{format_date, NaiveDate};
+use aether_sdk::dates::{format_date, Datelike, NaiveDate};
 use aether_sdk::db::Filter;
 use aether_sdk::prelude::*;
 
-use crate::common::{account_by_code, id_of, journal_by_code, ledger, pick, require_admin, text, Record};
+use crate::common::{account_by_code, id_of, journal_by_code, ledger, pick, require_admin, text, today_date, Record};
 use crate::rules::apply_template;
 
 const KINDS: &[&str] = &["asset", "liability", "equity", "income", "expense"];
@@ -128,6 +128,10 @@ fn last_day(year: i32, month: u32) -> Result<NaiveDate> {
 
 fn fiscal_year(input: Year) -> Result<Vec<Record>> {
     require_admin()?;
+    make_fiscal_year(input)
+}
+
+fn make_fiscal_year(input: Year) -> Result<Vec<Record>> {
     if !(1990..=2100).contains(&input.year) {
         return Err(Error::msg("a year between 1990 and 2100"));
     }
@@ -211,7 +215,114 @@ fn new_rule(input: NewRule) -> Result<Record> {
     db::create("gl_posting_rule", &data)
 }
 
+/// (code, name, kind, parent group, is_group, is_control)
+const SEED_ACCOUNTS: &[(&str, &str, &str, &str, bool, bool)] = &[
+    ("1", "Assets", "asset", "", true, false),
+    ("1010", "Cash on hand", "asset", "1", false, false),
+    ("1020", "Bank", "asset", "1", false, false),
+    ("1100", "Accounts receivable", "asset", "1", false, true),
+    ("1200", "Staff advances and loans", "asset", "1", false, false),
+    ("1300", "Input tax receivable", "asset", "1", false, false),
+    ("1400", "Inventory", "asset", "1", false, false),
+    ("1450", "Work in progress", "asset", "1", false, false),
+    ("1500", "Fixed assets", "asset", "1", false, false),
+    ("1590", "Accumulated depreciation", "asset", "1", false, false),
+    ("2", "Liabilities", "liability", "", true, false),
+    ("2000", "Goods received not invoiced", "liability", "2", false, false),
+    ("2100", "Accounts payable", "liability", "2", false, true),
+    ("2200", "Output tax payable", "liability", "2", false, false),
+    ("2300", "Salaries payable", "liability", "2", false, false),
+    ("2310", "Income tax withheld payable", "liability", "2", false, false),
+    ("2320", "Social security payable", "liability", "2", false, false),
+    ("2400", "Staff reimbursements payable", "liability", "2", false, false),
+    ("2500", "Customer deposits", "liability", "2", false, false),
+    ("2900", "Loans payable", "liability", "2", false, false),
+    ("3", "Equity", "equity", "", true, false),
+    ("3000", "Share capital", "equity", "3", false, false),
+    ("3100", "Retained earnings", "equity", "3", false, false),
+    ("4", "Income", "income", "", true, false),
+    ("4000", "Sales revenue", "income", "4", false, false),
+    ("4100", "Other income", "income", "4", false, false),
+    ("4200", "Sales returns and discounts", "income", "4", false, false),
+    ("5", "Expenses", "expense", "", true, false),
+    ("5000", "Cost of goods sold", "expense", "5", false, false),
+    ("5100", "Inventory adjustment", "expense", "5", false, false),
+    ("5200", "Purchase price variance", "expense", "5", false, false),
+    ("5300", "Manufacturing labour and overhead absorbed", "expense", "5", false, false),
+    ("6000", "Salaries and wages", "expense", "5", false, false),
+    ("6100", "Employer payroll contributions", "expense", "5", false, false),
+    ("6200", "Rent", "expense", "5", false, false),
+    ("6300", "Utilities", "expense", "5", false, false),
+    ("6400", "Office supplies", "expense", "5", false, false),
+    ("6500", "Travel and accommodation", "expense", "5", false, false),
+    ("6600", "Professional fees", "expense", "5", false, false),
+    ("6700", "Depreciation", "expense", "5", false, false),
+    ("6800", "Bank charges", "expense", "5", false, false),
+    ("6900", "Other expenses", "expense", "5", false, false),
+];
+
+/// (code, name, kind, prefix, default account)
+const SEED_JOURNALS: &[(&str, &str, &str, &str, &str)] = &[
+    ("GEN", "General journal", "general", "JV", ""),
+    ("SAL", "Sales", "general", "SAL", ""),
+    ("PUR", "Purchases", "purchase", "PUR", ""),
+    ("STK", "Stock", "general", "STK", ""),
+    ("PAY", "Payroll", "payroll", "PAY", ""),
+    ("BNK", "Bank", "bank", "BNK", "1020"),
+    ("CSH", "Cash", "bank", "CSH", "1010"),
+];
+
+/// A starting ledger for an organization that has none: the ledger in the base currency, a small
+/// generic chart of accounts, the usual journals and this calendar year's periods. Country-specific
+/// charts are a matter for the organization (or a pack). Everything is created only when missing,
+/// so running it again, or on an organization that already set itself up, changes nothing.
+/// Posting rules are not seeded: they belong to the plugins that send the events.
+fn seed() -> Result<Value> {
+    // The ledger's currency is the organization's base currency; without one there is nothing to guess.
+    let mut made_ledger = false;
+    if db::count("gl_ledger", Filter::all())? == 0 {
+        let base: Option<Value> = plugins::call("currency", "get_base", &json!({})).ok().flatten();
+        let Some(code) = base.as_ref().and_then(|c| c.get("code")).and_then(Value::as_str) else {
+            return Ok(json!({ "ledger": false, "reason": "the organization has no base currency yet" }));
+        };
+        db::create::<Record>("gl_ledger", &json!({ "name": "General ledger", "base_currency": code, "seq": 0 }))?;
+        made_ledger = true;
+    }
+    let mut accounts = 0;
+    for (code, name, kind, parent, is_group, is_control) in SEED_ACCOUNTS {
+        if db::count("gl_account", Filter::eq("code", *code))? > 0 {
+            continue;
+        }
+        let mut data = json!({ "code": code, "name": name, "kind": kind, "is_group": is_group, "is_control": is_control, "is_active": true });
+        if !parent.is_empty() {
+            data["parent"] = account_by_code(parent)?["id"].clone();
+        }
+        db::create::<Record>("gl_account", &data)?;
+        accounts += 1;
+    }
+    let mut journals = 0;
+    for (code, name, kind, prefix, account) in SEED_JOURNALS {
+        if db::count("gl_journal", Filter::eq("code", *code))? > 0 {
+            continue;
+        }
+        let mut data = json!({ "code": code, "name": name, "kind": kind, "prefix": prefix, "next": 0, "is_active": true });
+        if !account.is_empty() {
+            data["default_account"] = account_by_code(account)?["id"].clone();
+        }
+        db::create::<Record>("gl_journal", &data)?;
+        journals += 1;
+    }
+    let year = today_date()?.year();
+    let periods = make_fiscal_year(Year { year, start_month: None, shape: None })?.len();
+    Ok(json!({ "ledger": made_ledger, "accounts": accounts, "journals": journals, "periods": periods }))
+}
+
 handler! {
+    /// A starting ledger, generic chart, journals and this year's periods when missing; runs on install and upgrade.
+    fn seed_ledger(_: Empty) -> Value {
+        seed()
+    }
+
     fn setup_ledger(input: SetupLedger) -> Record {
         make_ledger(input)
     }

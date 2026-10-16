@@ -32,7 +32,9 @@ struct Ledger {
 
 #[derive(Deserialize)]
 struct Listing {
-    journal: String,
+    /// A journal code; every journal when omitted (the entries page lists them all).
+    #[serde(default)]
+    journal: Option<String>,
     #[serde(flatten)]
     range: Range,
 }
@@ -159,8 +161,12 @@ fn general_ledger(input: Ledger) -> Result<Value> {
 
 fn journal_listing(input: Listing) -> Result<Vec<Record>> {
     require_reader()?;
-    let journal = journal_by_code(&input.journal)?;
-    db::find::<Record>("gl_entry").matching(Filter::eq("journal", id_of(&journal)?).and(date_filter(&input.range)?)).order_by("seq").limit(500).all()
+    let dates = date_filter(&input.range)?;
+    let filter = match input.journal.as_deref().map(str::trim).filter(|code| !code.is_empty()) {
+        Some(code) => Filter::eq("journal", id_of(&journal_by_code(code)?)?).and(dates),
+        None => dates,
+    };
+    db::find::<Record>("gl_entry").matching(filter).order_by("seq").limit(500).all()
 }
 
 fn line_of(value: &Value) -> Result<Line> {

@@ -29,6 +29,13 @@ access_models = [
 is_builtin = false
 wasm_file = "out/plugin.wasm"
 
+[[command]]
+name = "seed"
+function = "seed_payments"
+help = "Create default payment settings, terms and bank and cash methods against the generic chart (idempotent)"
+on_install = true
+on_upgrade = true
+
 [[roles]]
 name = "pay_clerk"
 label = "Payment clerk"
@@ -45,6 +52,8 @@ name = "document_settled"
 
 [[schedule]]
 name = "link-documents"
+title = "Link payment documents"
+description = "Finds the ledger lines of documents posted since they were registered and refreshes the state of open documents."
 function = "link_documents"
 every = "10m"
 

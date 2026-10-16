@@ -39,6 +39,8 @@ None. No `access_models`, no local tables. Chart, journals, periods, and posting
 |---|---|
 | `hr_payroll.payroll_run_approved` | `hr_payroll` |
 | `hr_expense.report_approved` | `hr_expense` |
+| `hr_insurance.premium_accrued` | `hr_insurance` |
+| `hr_insurance.premium_paid` | `hr_insurance` |
 
 **Emit**: none.
 
@@ -53,3 +55,25 @@ None. Authorization for resulting entries is whatever `gl` enforces when posting
 - Does not create accounts, journals, or posting rules; that is `gl` admin work.
 - Does not validate HR payloads beyond what `gl` posting rules require.
 - Not a substitute for installing `hr_payroll` / `hr_expense`; those must emit the named events.
+
+## Insurance posting rules
+
+`hr_insurance` events carry `date` (the document's day), `currency`, and money as text. Only the two premium events
+are listened to: payroll already posts reimbursements and the employee's deduction, so a rule on `claim_paid` would
+count them twice (add one if your payroll does not post them). Create these as a ledger administrator
+(`gl.create_posting_rule`; the accounts below are from the seeded chart, change them to yours):
+
+```json
+{ "event": "hr_insurance.premium_accrued", "journal": "GEN", "source_path": "premium", "date_path": "date", "currency_path": "currency",
+  "memo": "Insurance premium (employer share)",
+  "lines": [ { "account": "6100", "side": "debit",  "amount": "employer_share" },
+             { "account": "2400", "side": "credit", "amount": "employer_share" } ] }
+
+{ "event": "hr_insurance.premium_paid", "journal": "GEN", "source_path": "payment", "date_path": "date", "currency_path": "currency",
+  "memo": "Insurance premium remitted",
+  "lines": [ { "account": "2400", "side": "debit",  "amount": "employer_share" },
+             { "account": "1020", "side": "credit", "amount": "employer_share" } ] }
+```
+
+The employee's share is withheld by payroll (a deduction adjustment) and booked by the payroll run; remitting it to the
+insurer is a rule on the account your payroll withholds it into.

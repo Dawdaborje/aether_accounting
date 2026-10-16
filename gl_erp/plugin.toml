@@ -12,7 +12,7 @@ can be paid and aged. Transfers are skipped (no P&L or balance-sheet change insi
 Install only when both accounting and ERP are in use. Written in Rust.
 """
 authors = [{ name = "Aether", email = "hello@aether.local" }]
-dependencies = ["gl", "gl_payment", "erp_inventory", "erp_procurement", "erp_selling"]
+dependencies = ["gl", "gl_payment", "erp_inventory", "erp_procurement", "erp_selling", "erp_manufacturing"]
 capabilities = ["events::subscribe", "plugins::call"]
 access_models = []
 is_builtin = false
@@ -29,12 +29,32 @@ direction = "listen"
 handler = "forward"
 
 [[events]]
+name = "erp_inventory.stock_revalued"
+direction = "listen"
+handler = "forward"
+
+[[events]]
+name = "erp_manufacturing.mo_completed"
+direction = "listen"
+handler = "forward"
+
+[[events]]
 name = "erp_procurement.purchase_bill_approved"
 direction = "listen"
 handler = "forward"
 
 [[events]]
+name = "erp_procurement.purchase_debit_note_approved"
+direction = "listen"
+handler = "forward"
+
+[[events]]
 name = "erp_selling.sales_invoice_approved"
+direction = "listen"
+handler = "forward"
+
+[[events]]
+name = "erp_selling.sales_credit_note_approved"
 direction = "listen"
 handler = "forward"
 

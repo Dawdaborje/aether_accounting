@@ -15,8 +15,8 @@ allocation rows, and the open amount of a line is derived from them.
 Single currency in this version. Written in Rust. 
 """
 authors = [{ name = "Aether", email = "hello@aether.local" }]
-dependencies = []
-capabilities = ["db::query", "db::mutate", "db::transaction"]
+dependencies = ["currency"]
+capabilities = ["db::query", "db::mutate", "db::transaction", "plugins::call"]
 access_models = [
   { name = "gl_ledger", permissions = ["read", "write"] },
   { name = "gl_account", permissions = ["read", "write"] },
@@ -30,6 +30,13 @@ access_models = [
 ]
 is_builtin = false
 wasm_file = "out/plugin.wasm"
+
+[[command]]
+name = "seed"
+function = "seed_ledger"
+help = "Create the ledger, a generic chart of accounts, the usual journals and this year's periods when missing (idempotent)"
+on_install = true
+on_upgrade = true
 
 [[roles]]
 name = "gl_admin"
@@ -48,6 +55,8 @@ description = "Reads the ledger and its reports"
 
 [[schedule]]
 name = "index-recent-entries"
+title = "Index recent ledger entries"
+description = "Completes the line rows of ledger entries whose copy failed, so searches and reports see every entry."
 function = "index_recent_entries"
 every = "10m"
 

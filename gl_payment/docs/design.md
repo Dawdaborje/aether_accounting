@@ -8,8 +8,7 @@ What customers owe the organization and what it owes suppliers (and employees), 
 money that settles it. Records incoming and outgoing payments, posts them to the ledger, matches them against the
 documents they pay, and reports what is open and overdue. Single currency (the ledger's `base_currency`), like `gl`.
 
-Odoo: `account.payment`, payment terms, aged receivable/payable. ERPNext: Payment Entry, Payment Terms Template,
-Payment Ledger Entry, Accounts Receivable/Payable reports.
+Scope: payments, payment terms, and aged receivable/payable reports.
 
 ## What already exists and is reused
 
