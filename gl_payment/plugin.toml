@@ -57,12 +57,6 @@ description = "Finds the ledger lines of documents posted since they were regist
 function = "link_documents"
 every = "10m"
 
-[app]
-icon = "banknote"
-route = "/accounting/payments"
-description = "Payments, open invoices and bills"
-roles = ["pay_clerk", "gl.gl_reader", "gl.gl_accountant", "gl.gl_admin"]
-
 [plugin.api]
 version = "0.1"
 

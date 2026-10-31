@@ -61,9 +61,11 @@ function = "index_recent_entries"
 every = "10m"
 
 [app]
+nav = true
 icon = "scale"
 route = "/accounting"
-description = "Trial balance and journals"
+label = "General ledger"
+description = "Journal entries and payments"
 
 [plugin.api]
 version = "0.1"
