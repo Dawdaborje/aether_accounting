@@ -22,5 +22,16 @@
         "write"
       ]
     }
+  ],
+  "fields": [
+    {
+      "fields": [
+        "status",
+        "closed_on"
+      ],
+      "write_roles": [
+        "via:self"
+      ]
+    }
   ]
 }

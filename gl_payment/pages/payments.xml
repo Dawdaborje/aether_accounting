@@ -1,0 +1,3 @@
+<page extends="/accounting" title="Payments" sort="10" roles="pay_clerk, gl.gl_reader, gl.gl_accountant, gl.gl_admin">
+  <use component="payments_panel"/>
+</page>

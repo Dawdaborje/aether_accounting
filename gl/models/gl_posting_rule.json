@@ -67,6 +67,20 @@
       "label": "%lines%",
       "type": "json",
       "required": true
+    },
+    {
+      "id": "fld_6r2b73b92d",
+      "name": "version_path",
+      "label": "%version_path%",
+      "type": "string",
+      "help": "Where the document's own version is in the event payload; the entry key follows it."
+    },
+    {
+      "id": "fld_5o4bs2epuv",
+      "name": "date_path",
+      "label": "%date_path%",
+      "type": "string",
+      "help": "Where the document's date is in the payload, or @today to use the day of processing on purpose."
     }
   ],
   "indexes": [

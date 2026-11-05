@@ -36,5 +36,24 @@
         }
       }
     }
+  ],
+  "fields": [
+    {
+      "fields": [
+        "entry",
+        "line_no",
+        "account",
+        "debit",
+        "credit",
+        "party",
+        "tax_code",
+        "memo",
+        "dimensions",
+        "date"
+      ],
+      "write_roles": [
+        "via:self"
+      ]
+    }
   ]
 }

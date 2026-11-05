@@ -22,5 +22,19 @@
         "write"
       ]
     }
+  ],
+  "fields": [
+    {
+      "fields": [
+        "code",
+        "kind",
+        "parent",
+        "is_group",
+        "is_control"
+      ],
+      "write_roles": [
+        "via:self"
+      ]
+    }
   ]
 }

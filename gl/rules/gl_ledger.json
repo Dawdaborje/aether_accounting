@@ -21,6 +21,35 @@
         "create",
         "write"
       ]
+    },
+    {
+      "name": "post",
+      "roles": [
+        "gl_accountant"
+      ],
+      "operations": [
+        "write"
+      ]
+    }
+  ],
+  "fields": [
+    {
+      "fields": [
+        "seq",
+        "indexed_seq",
+        "base_currency"
+      ],
+      "write_roles": [
+        "via:self"
+      ]
+    },
+    {
+      "fields": [
+        "name"
+      ],
+      "write_roles": [
+        "gl_admin"
+      ]
     }
   ]
 }

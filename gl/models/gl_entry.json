@@ -167,6 +167,19 @@
       "label": "%posted_at%",
       "type": "string",
       "max_length": 40
+    },
+    {
+      "id": "fld_mhhn5ljd09",
+      "name": "journal_code",
+      "label": "%journal_code%",
+      "type": "string",
+      "max_length": 30
+    },
+    {
+      "id": "fld_yaud9xnbp8",
+      "name": "rule_version",
+      "label": "%rule_version%",
+      "type": "int"
     }
   ],
   "view": {

@@ -1,12 +1,18 @@
-<page route="/accounting" title="Journal entries" model="gl_entry">
-  <view type="list" model="gl_entry" source="journal_listing_report">
-    <search/>
-    <columns>
-      <column field="number" label="Entry"/>
-      <column field="date" label="Date"/>
-      <column field="memo" label="Memo"/>
-      <column field="total" label="Total"/>
-    </columns>
-    <empty title="No entries" description="Entries appear when they are posted by an accountant or from an event."/>
+<page route="/accounting" title="General ledger" model="gl_entry" icon="scale">
+  <view type="form">
+    <notebook>
+      <page title="Journal entries">
+        <view type="list" model="gl_entry" source="journal_listing_report">
+          <search/>
+          <columns>
+            <column field="number" label="Entry"/>
+            <column field="date" label="Date"/>
+            <column field="memo" label="Memo"/>
+            <column field="total" label="Total"/>
+          </columns>
+          <empty title="No entries" description="Entries appear when they are posted by an accountant or from an event."/>
+        </view>
+      </page>
+    </notebook>
   </view>
 </page>

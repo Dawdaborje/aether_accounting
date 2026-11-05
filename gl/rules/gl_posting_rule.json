@@ -22,5 +22,16 @@
         "write"
       ]
     }
+  ],
+  "fields": [
+    {
+      "fields": [
+        "version",
+        "event"
+      ],
+      "write_roles": [
+        "via:self"
+      ]
+    }
   ]
 }

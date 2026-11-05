@@ -1,18 +1,19 @@
 //! The rules of the ledger, with nothing read from a database.
 //!
-//! What the ERPNext and Odoo sources taught (see `docs/design.md`): an entry balances exactly, in one
-//! place, with no tolerance and no automatic round-off line (ERPNext adds one and exempts one entry
-//! type); an entry is written once and corrected by a reversal; numbers come from a counter, not from
+//! An entry balances exactly, in one place, with no tolerance and no automatic round-off line;
+//! an entry is written once and corrected by a reversal; numbers come from a counter, not from
 //! parsing a name; open amounts are derived from allocation rows, never stored on a line.
+//! See this plugin's `docs/design.md`.
 
-use aether_sdk::dates::NaiveDate;
+use aether_sdk::dates::{add_months, Datelike, Duration, NaiveDate};
 use aether_sdk::decimal::Decimal;
 use aether_sdk::{json, Error, Result, Value};
 use sha2::{Digest, Sha256};
 
 /// A transaction holds 50 writes; an entry takes one, the counters two.
 pub const MAX_LINES: usize = 45;
-pub const HASH_VERSION: i64 = 1;
+/// What new entries are hashed with. Version 1 entries are still checked the old way.
+pub const HASH_VERSION: i64 = 2;
 pub const GENESIS: &str = "genesis";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -81,9 +82,11 @@ pub fn numbered(prefix: &str, year: i32, n: i64) -> String {
     format!("{prefix}-{year}-{n:05}")
 }
 
-/// The text an entry's hash covers: the previous hash, and the entry's own fields and lines, in a fixed order.
+/// The text a version 1 entry's hash covers: the previous hash, and the entry's own fields and lines, in a fixed
+/// order. It leaves out the link to a reversed entry, the source, the reason and the memos, and joins fields with
+/// `|` without escaping; kept only so entries posted under it can still be verified.
 pub fn canonical(prev_hash: &str, seq: i64, number: &str, date: &str, journal: &str, currency: &str, lines: &[(String, &Line)]) -> String {
-    let mut text = format!("v{HASH_VERSION}|{prev_hash}|{seq}|{number}|{date}|{journal}|{currency}");
+    let mut text = format!("v1|{prev_hash}|{seq}|{number}|{date}|{journal}|{currency}");
     for (code, line) in lines {
         text.push_str(&format!(
             "\n{code}|{}|{}|{}|{}",
@@ -96,9 +99,123 @@ pub fn canonical(prev_hash: &str, seq: i64, number: &str, date: &str, journal: &
     text
 }
 
+/// Everything about an entry, apart from its lines, that its hash protects.
+#[derive(Debug, Clone, Default)]
+pub struct Facts<'a> {
+    pub prev_hash: &'a str,
+    pub seq: i64,
+    pub number: &'a str,
+    pub date: &'a str,
+    /// The journal's code as it was when the entry was posted (stored on the entry; renaming a journal changes nothing).
+    pub journal_code: &'a str,
+    pub currency: &'a str,
+    pub reverses: Option<&'a str>,
+    pub source_kind: Option<&'a str>,
+    pub source_id: Option<&'a str>,
+    pub source_version: Option<i64>,
+    pub reason: Option<&'a str>,
+    pub memo: Option<&'a str>,
+}
+
+/// One field as `<length>:<text>;`. No text can run into the next field, whatever characters it holds.
+fn field(out: &mut String, value: &str) {
+    out.push_str(&value.chars().count().to_string());
+    out.push(':');
+    out.push_str(value);
+    out.push(';');
+}
+
+/// Version 2: every field is length-prefixed, and the hash also covers the reversal link, the source and its
+/// version, the reason, the memos and the journal code stored on the entry.
+pub fn canonical_v2(facts: &Facts, lines: &[(String, &Line)]) -> String {
+    let mut text = String::from("v2;");
+    field(&mut text, facts.prev_hash);
+    field(&mut text, &facts.seq.to_string());
+    field(&mut text, facts.number);
+    field(&mut text, facts.date);
+    field(&mut text, facts.journal_code);
+    field(&mut text, facts.currency);
+    field(&mut text, facts.reverses.unwrap_or(""));
+    field(&mut text, facts.source_kind.unwrap_or(""));
+    field(&mut text, facts.source_id.unwrap_or(""));
+    field(&mut text, &facts.source_version.map(|v| v.to_string()).unwrap_or_default());
+    field(&mut text, facts.reason.unwrap_or(""));
+    field(&mut text, facts.memo.unwrap_or(""));
+    field(&mut text, &lines.len().to_string());
+    for (code, line) in lines {
+        field(&mut text, code);
+        field(&mut text, &line.debit.to_string());
+        field(&mut text, &line.credit.to_string());
+        field(&mut text, line.party.as_deref().unwrap_or(""));
+        field(&mut text, line.tax_code.as_deref().unwrap_or(""));
+        field(&mut text, line.memo.as_deref().unwrap_or(""));
+    }
+    text
+}
+
+/// The hashed text of an entry under the hash version it was posted with.
+pub fn canonical_for(version: i64, facts: &Facts, lines: &[(String, &Line)]) -> String {
+    if version >= 2 {
+        canonical_v2(facts, lines)
+    } else {
+        canonical(facts.prev_hash, facts.seq, facts.number, facts.date, facts.journal_code, facts.currency, lines)
+    }
+}
+
+/// The key that makes an event post once. With a document version from the payload it is the document and its
+/// version, so a document that changed posts again and a redelivered event after a new rule version does not; a
+/// rule that names no version path keeps the old key on the rule's version.
+pub fn idempotency_key(event: &str, source_id: &str, document_version: Option<&str>, rule_version: i64) -> String {
+    match document_version {
+        Some(version) => format!("{event}:{source_id}:d{version}"),
+        None => format!("{event}:{source_id}:v{rule_version}"),
+    }
+}
+
 pub fn sha256_hex(text: &str) -> String {
     let digest = Sha256::digest(text.as_bytes());
     digest.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// The periods of one fiscal year: `(name, start, end)`, covering every day from `start_month` of `year` to the day
+/// before the same month a year later, with no gap and no overlap.
+///
+/// * `monthly`: twelve calendar months. A year that starts in July is named for the year it starts in.
+/// * `thirteen`: thirteen four-week periods; the last one takes the extra day or two of the year.
+/// * `445`: four quarters of 4, 4 and 5 weeks (52 weeks); the last period takes the extra day or two.
+/// The two week-based shapes start on the first day of `start_month`, so a year always lines up with the calendar
+/// month the business names, which a 52-week year anchored on a weekday would not.
+pub fn period_plan(year: i32, start_month: u32, shape: &str) -> Result<Vec<(String, NaiveDate, NaiveDate)>> {
+    if !(1..=12).contains(&start_month) {
+        return Err(Error::msg("the fiscal year starts in a month from 1 to 12"));
+    }
+    let first = NaiveDate::from_ymd_opt(year, start_month, 1).ok_or_else(|| Error::msg("a bad start month"))?;
+    let end_of_year = add_months(first, 12) - Duration::days(1);
+    let label = if start_month == 1 { year.to_string() } else { format!("FY{year}") };
+    let mut out = Vec::new();
+    match shape {
+        "monthly" => {
+            for n in 0..12u32 {
+                let start = add_months(first, n);
+                let end = add_months(first, n + 1) - Duration::days(1);
+                let name = if start_month == 1 { format!("{year}-{:02}", n + 1) } else { format!("{label}-P{:02}", n + 1) };
+                out.push((name, start, end));
+            }
+        }
+        "thirteen" | "445" => {
+            let weeks: Vec<i64> = if shape == "thirteen" { vec![4; 13] } else { [4, 4, 5].iter().cycle().take(12).copied().collect() };
+            let mut start = first;
+            for (n, w) in weeks.iter().enumerate() {
+                let last = n + 1 == weeks.len();
+                let end = if last { end_of_year } else { start + Duration::days(w * 7 - 1) };
+                out.push((format!("{label}-P{:02}", n + 1), start, end));
+                start = end + Duration::days(1);
+            }
+        }
+        other => return Err(Error::msg(format!("a fiscal year is `monthly`, `thirteen` or `445`, not `{other}`"))),
+    }
+    debug_assert_eq!(out.first().map(|p| p.1.year()), Some(year));
+    Ok(out)
 }
 
 /// The period that holds a day.
@@ -264,6 +381,83 @@ mod tests {
         assert_eq!(sha256_hex("abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
         let other = canonical(GENESIS, 1, "GJ-2026-00001", "2026-10-06", "GJ", "GMD", &[("1000".into(), &line("1000", "10.01", "0.00")?)]);
         assert_ne!(sha256_hex(&text), sha256_hex(&other), "an amount is part of the hash");
+        Ok(())
+    }
+
+    fn facts<'a>() -> Facts<'a> {
+        Facts { prev_hash: GENESIS, seq: 1, number: "GJ-2026-00001", date: "2026-10-06", journal_code: "GJ", currency: "GMD", ..Facts::default() }
+    }
+
+    #[test]
+    fn version_two_covers_what_version_one_left_out() -> Result<()> {
+        let l = line("1000", "10.00", "0.00")?;
+        let pairs = vec![("1000".to_string(), &l)];
+        let base = sha256_hex(&canonical_v2(&facts(), &pairs));
+        for changed in [
+            Facts { reverses: Some("gl_entry:x"), ..facts() },
+            Facts { source_kind: Some("hr.payroll"), ..facts() },
+            Facts { source_id: Some("run1"), ..facts() },
+            Facts { source_version: Some(3), ..facts() },
+            Facts { reason: Some("wrong account"), ..facts() },
+            Facts { memo: Some("m"), ..facts() },
+            Facts { journal_code: "GJ2", ..facts() },
+        ] {
+            assert_ne!(sha256_hex(&canonical_v2(&changed, &pairs)), base);
+        }
+        let mut with_memo = l.clone();
+        with_memo.memo = Some("note".into());
+        assert_ne!(sha256_hex(&canonical_v2(&facts(), &[("1000".to_string(), &with_memo)])), base, "a line memo is covered");
+        Ok(())
+    }
+
+    #[test]
+    fn version_two_fields_cannot_run_into_each_other() -> Result<()> {
+        // With `|` joining, party "a|b" and tax "c" read the same as party "a" and tax "b|c".
+        let mut one = line("1000", "10.00", "0.00")?;
+        one.party = Some("a|b".into());
+        one.tax_code = Some("c".into());
+        let mut two = line("1000", "10.00", "0.00")?;
+        two.party = Some("a".into());
+        two.tax_code = Some("b|c".into());
+        assert_ne!(canonical_v2(&facts(), &[("1000".into(), &one)]), canonical_v2(&facts(), &[("1000".into(), &two)]));
+        let (old_one, old_two) = (canonical(GENESIS, 1, "n", "d", "GJ", "GMD", &[("1000".into(), &one)]), canonical(GENESIS, 1, "n", "d", "GJ", "GMD", &[("1000".into(), &two)]));
+        assert_eq!(old_one, old_two, "the old text was ambiguous, which is why it was replaced");
+        Ok(())
+    }
+
+    #[test]
+    fn old_entries_are_checked_the_old_way() -> Result<()> {
+        let l = line("1000", "10.00", "0.00")?;
+        let pairs = vec![("1000".to_string(), &l)];
+        assert_eq!(canonical_for(1, &facts(), &pairs), canonical(GENESIS, 1, "GJ-2026-00001", "2026-10-06", "GJ", "GMD", &pairs));
+        assert!(canonical_for(2, &facts(), &pairs).starts_with("v2;"));
+        Ok(())
+    }
+
+    #[test]
+    fn the_key_follows_the_document_not_the_rule() {
+        assert_eq!(idempotency_key("hr.payroll_approved", "run1", Some("4"), 2), "hr.payroll_approved:run1:d4");
+        assert_eq!(idempotency_key("hr.payroll_approved", "run1", Some("4"), 3), "hr.payroll_approved:run1:d4", "a new rule version does not repost");
+        assert_ne!(idempotency_key("e", "run1", Some("5"), 2), idempotency_key("e", "run1", Some("4"), 2), "a changed document does");
+        assert_eq!(idempotency_key("e", "run1", None, 2), "e:run1:v2");
+    }
+
+    #[test]
+    fn every_fiscal_year_shape_covers_each_day_once() -> Result<()> {
+        for (start_month, shape, count) in [(1, "monthly", 12), (7, "monthly", 12), (1, "thirteen", 13), (4, "445", 12)] {
+            let plan = period_plan(2026, start_month, shape)?;
+            assert_eq!(plan.len(), count, "{shape}");
+            assert_eq!(plan[0].1, NaiveDate::from_ymd_opt(2026, start_month, 1).ok_or_else(|| Error::msg("date"))?);
+            for pair in plan.windows(2) {
+                assert_eq!(pair[0].2 + Duration::days(1), pair[1].1, "{shape}: no gap and no overlap after {}", pair[0].0);
+            }
+            let last = plan.last().ok_or_else(|| Error::msg("empty"))?;
+            assert_eq!(last.2 + Duration::days(1), add_months(plan[0].1, 12), "{shape} ends the day before the next year");
+        }
+        assert_eq!(period_plan(2026, 7, "monthly")?[0].0, "FY2026-P01");
+        assert_eq!(period_plan(2026, 1, "monthly")?[0].0, "2026-01");
+        assert!(period_plan(2026, 13, "monthly").is_err());
+        assert!(period_plan(2026, 1, "lunar").is_err());
         Ok(())
     }
 

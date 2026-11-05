@@ -22,5 +22,17 @@
         "write"
       ]
     }
+  ],
+  "fields": [
+    {
+      "fields": [
+        "next",
+        "code",
+        "prefix"
+      ],
+      "write_roles": [
+        "via:self"
+      ]
+    }
   ]
 }

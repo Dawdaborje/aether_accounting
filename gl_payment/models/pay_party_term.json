@@ -1,0 +1,63 @@
+{
+  "model_id": "mdl_konx5wuixg",
+  "name": "pay_party_term",
+  "label": "%pay_party_term%",
+  "plural_label": "%pay_party_terms%",
+  "icon": "user-check",
+  "title_field": "party",
+  "fields": [
+    {
+      "id": "fld_bv7fe6y7if",
+      "name": "party",
+      "label": "%party%",
+      "type": "string",
+      "required": true,
+      "max_length": 80,
+      "index": "plain"
+    },
+    {
+      "id": "fld_wsuufqldgj",
+      "name": "side",
+      "label": "%side%",
+      "type": "select",
+      "required": true,
+      "options": [
+        {
+          "id": "opt_aramt3fnhv",
+          "value": "receivable",
+          "label": "%receivable%"
+        },
+        {
+          "id": "opt_layai2ge7i",
+          "value": "payable",
+          "label": "%payable%"
+        }
+      ]
+    },
+    {
+      "id": "fld_vrgp4rhce2",
+      "name": "term",
+      "label": "%term%",
+      "type": "link",
+      "required": true,
+      "target": "pay_term"
+    },
+    {
+      "id": "fld_3dshrqgaf7",
+      "name": "key",
+      "label": "%key%",
+      "type": "string",
+      "required": true,
+      "max_length": 120,
+      "index": "unique",
+      "help": "Party and side: one term each."
+    }
+  ],
+  "view": {
+    "list": [
+      "party",
+      "side",
+      "term"
+    ]
+  }
+}

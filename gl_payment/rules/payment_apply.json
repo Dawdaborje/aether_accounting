@@ -1,0 +1,63 @@
+{
+  "model": "payment_apply",
+  "access": [
+    {
+      "name": "read",
+      "roles": [
+        "pay_clerk",
+        "gl.gl_reader",
+        "gl.gl_accountant",
+        "gl.gl_admin"
+      ],
+      "operations": [
+        "read"
+      ]
+    },
+    {
+      "name": "change",
+      "roles": [
+        "pay_clerk",
+        "gl.gl_accountant",
+        "gl.gl_admin"
+      ],
+      "operations": [
+        "create",
+        "write"
+      ]
+    },
+    {
+      "name": "remove",
+      "roles": [
+        "gl.gl_admin"
+      ],
+      "operations": [
+        "delete"
+      ]
+    }
+  ],
+  "restrict": [
+    {
+      "name": "sealed",
+      "operations": [
+        "delete"
+      ],
+      "when": {
+        "key": "~never~"
+      }
+    }
+  ],
+  "fields": [
+    {
+      "fields": [
+        "payment",
+        "document",
+        "amount",
+        "key",
+        "allocation"
+      ],
+      "write_roles": [
+        "via:self"
+      ]
+    }
+  ]
+}

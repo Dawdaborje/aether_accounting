@@ -1,0 +1,77 @@
+{
+  "model_id": "mdl_vc73ybk5h4",
+  "name": "pay_setting",
+  "label": "%pay_setting%",
+  "plural_label": "%pay_settings%",
+  "icon": "settings",
+  "title_field": "receivable_account",
+  "fields": [
+    {
+      "id": "fld_xn5qrcdc2c",
+      "name": "receivable_account",
+      "label": "%receivable_account%",
+      "type": "string",
+      "required": true,
+      "max_length": 40,
+      "help": "Code of the receivable control account in the ledger."
+    },
+    {
+      "id": "fld_or3yi5wp3h",
+      "name": "payable_account",
+      "label": "%payable_account%",
+      "type": "string",
+      "required": true,
+      "max_length": 40,
+      "help": "Code of the payable control account in the ledger."
+    },
+    {
+      "id": "fld_acaiydtbx3",
+      "name": "receivable_term",
+      "label": "%receivable_term%",
+      "type": "link",
+      "target": "pay_term"
+    },
+    {
+      "id": "fld_eqqdlacmop",
+      "name": "payable_term",
+      "label": "%payable_term%",
+      "type": "link",
+      "target": "pay_term"
+    },
+    {
+      "id": "fld_w6vcjct7wp",
+      "name": "seq_in",
+      "label": "%seq_in%",
+      "type": "string",
+      "required": true,
+      "default": "pay_in",
+      "max_length": 60,
+      "help": "number_sequence code for incoming payments."
+    },
+    {
+      "id": "fld_r3spbxjzwd",
+      "name": "seq_out",
+      "label": "%seq_out%",
+      "type": "string",
+      "required": true,
+      "default": "pay_out",
+      "max_length": 60,
+      "help": "number_sequence code for outgoing payments."
+    },
+    {
+      "id": "fld_prtbtwcbu3",
+      "name": "four_eyes_out",
+      "label": "%four_eyes_out%",
+      "type": "bool",
+      "default": true,
+      "help": "An outgoing payment is confirmed by someone other than the person who drafted it."
+    }
+  ],
+  "view": {
+    "list": [
+      "receivable_account",
+      "payable_account",
+      "four_eyes_out"
+    ]
+  }
+}

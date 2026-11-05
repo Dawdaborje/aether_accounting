@@ -1,0 +1,75 @@
+{
+  "model": "payment",
+  "access": [
+    {
+      "name": "read",
+      "roles": [
+        "pay_clerk",
+        "gl.gl_reader",
+        "gl.gl_accountant",
+        "gl.gl_admin"
+      ],
+      "operations": [
+        "read"
+      ]
+    },
+    {
+      "name": "change",
+      "roles": [
+        "pay_clerk",
+        "gl.gl_accountant",
+        "gl.gl_admin"
+      ],
+      "operations": [
+        "create",
+        "write"
+      ]
+    },
+    {
+      "name": "remove",
+      "roles": [
+        "gl.gl_admin"
+      ],
+      "operations": [
+        "delete"
+      ]
+    }
+  ],
+  "restrict": [
+    {
+      "name": "sealed",
+      "operations": [
+        "delete"
+      ],
+      "when": {
+        "party": "~never~"
+      }
+    }
+  ],
+  "fields": [
+    {
+      "fields": [
+        "direction",
+        "number",
+        "party",
+        "company",
+        "method",
+        "date",
+        "amount",
+        "reference",
+        "memo",
+        "state",
+        "created_by",
+        "confirmed_by",
+        "cancelled_by",
+        "cancel_reason",
+        "gl_entry",
+        "gl_line",
+        "reverse_entry"
+      ],
+      "write_roles": [
+        "via:self"
+      ]
+    }
+  ]
+}
