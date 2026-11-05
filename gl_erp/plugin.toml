@@ -3,7 +3,7 @@ name = "gl_erp"
 icon_path = "assets/logo.svg"
 label = "Ledger entries from ERP"
 version = "0.2.0"
-description = "Turns stock ledger events into general-ledger entries through posting rules."
+description = "Turns stock movements from the ERP into general-ledger entries, using posting rules."
 long_description = """
 The general ledger (`gl`) knows nothing about inventory and `erp_inventory` knows nothing about accounts.
 This plugin sits between them: it listens to `erp_inventory.stock_posted` and `erp_inventory.stock_voided`

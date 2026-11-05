@@ -3,7 +3,7 @@ name = "gl"
 icon_path = "assets/logo.svg"
 label = "General ledger"
 version = "0.3.0"
-description = "A double-entry ledger whose entries are written once, numbered without gaps and chained by hash."
+description = "A double-entry ledger: entries are written once, numbered without gaps and chained by hash so tampering shows."
 long_description = """
 Entries balance exactly (no tolerance, no automatic round-off line) and are written once, with the two
 counters they move, in a single transaction: a mistake is corrected by a reversing entry that points at the
